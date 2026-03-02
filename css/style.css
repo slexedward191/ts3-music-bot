@@ -349,3 +349,29 @@ body{
   cursor: pointer;
   text-align: center;
 }
+.guest-btn {
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #7c7cff, #00ffd5);
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.guest-btn:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 14px 35px rgba(0,0,0,.45);
+}
+
+.guest-welcome {
+  margin-top: 10px;
+  font-weight: 700;
+  color: #aefcff;
+}
+
+.hidden {
+  display: none !important;
+}
