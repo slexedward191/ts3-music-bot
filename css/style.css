@@ -1,0 +1,80 @@
+body {
+    margin:0;
+    font-family:Arial;
+    background:#020617;
+    color:white;
+    text-align:center;
+}
+
+/* NAVBAR */
+.navbar{
+    position:sticky;
+    top:0;
+    background:rgba(2,6,23,0.9);
+    padding:15px 40px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.logo{
+    color:#22c55e;
+    font-weight:bold;
+    font-size:22px;
+}
+
+.nav-links a{
+    color:white;
+    margin-left:20px;
+    text-decoration:none;
+}
+
+/* HEADER */
+header{
+    padding:40px 20px;
+}
+
+/* CARDS */
+.features{
+    display:flex;
+    justify-content:center;
+    gap:20px;
+    flex-wrap:wrap;
+}
+
+.card{
+    background:#0f172a;
+    padding:25px;
+    border-radius:12px;
+    width:220px;
+}
+
+/* BUTTONS */
+.buttons{
+    margin-top:30px;
+}
+
+.btn{
+    padding:12px 22px;
+    border-radius:8px;
+    text-decoration:none;
+    color:white;
+    margin:5px;
+    display:inline-block;
+}
+
+.green{background:#22c55e;}
+.blue{background:#6366f1;}
+
+.online{
+    color:#22c55e;
+}
+
+/* STATUS */
+.statusBox{
+    background:#0f172a;
+    padding:30px;
+    border-radius:12px;
+    width:300px;
+    margin:30px auto;
+}
