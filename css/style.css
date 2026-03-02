@@ -375,3 +375,29 @@ body{
 .hidden {
   display: none !important;
 }
+#snow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.guest-btn {
+  background: linear-gradient(135deg, #7c7cff, #00ffd5);
+  color: #000;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.guest-welcome {
+  margin-top: 10px;
+  font-weight: 700;
+  color: #9effff;
+}
+
+.hidden {
+  display: none;
+}
