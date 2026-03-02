@@ -138,21 +138,28 @@ body{
   pointer-events: none;
   z-index: 5;
 }
-.music-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  padding: 18px 28px;
-  font-size: 20px;
-  font-weight: 700;
-  border: none;
+.music-btn::before {
+  content: "";
+  position: absolute;
+  inset: -8px;              /* Etrafındaki renkli alanı küçülttük */
   border-radius: 999px;
-  background: #0b1220;
-  color: #fff;
-  cursor: pointer;
-  z-index: 9999;
-  box-shadow: 0 10px 30px rgba(0,0,0,.35);
-  transform: scale(1.05);
+  background: linear-gradient(
+    90deg,
+    #ff0066,
+    #7c7cff,
+    #00f2ff,
+    #7cff00,
+    #ffb703,
+    #ff0066
+  );
+  filter: blur(10px);      /* Blur'u azalttık */
+  z-index: -1;
+  animation: spin 4s linear infinite;
+}
+
+@keyframes spin {
+  from { filter: blur(10px) hue-rotate(0deg); }
+  to   { filter: blur(10px) hue-rotate(360deg); }
 }
 
 .music-btn::before {
