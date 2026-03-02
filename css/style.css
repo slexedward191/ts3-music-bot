@@ -192,7 +192,7 @@ body{
   color: #fff;
   background: linear-gradient(135deg, #00ffcc, #3333ff);
   box-shadow: 0 10px 30px rgba(0,0,0,.35);
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform 0.2s ease, box-shadow .15s ease;
 }
 
 .join-ts:hover {
