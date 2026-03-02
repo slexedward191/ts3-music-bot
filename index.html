@@ -3,130 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>GameArea TS3 Music Bot</title>
 
-<style>
-
-/* ===== GENEL ===== */
-body{
-    margin:0;
-    font-family:Arial, Helvetica, sans-serif;
-    background:linear-gradient(120deg,#020617,#020c2b);
-    color:white;
-}
-
-/* ===== NAVBAR ===== */
-.navbar{
-    position:sticky;
-    top:0;
-    background:rgba(2,6,23,0.85);
-    backdrop-filter:blur(10px);
-    padding:15px 40px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.logo{
-    color:#22c55e;
-    font-size:22px;
-    font-weight:bold;
-}
-
-.nav-links a{
-    color:white;
-    text-decoration:none;
-    margin-left:20px;
-    font-weight:500;
-}
-
-.nav-links a:hover{
-    color:#22c55e;
-}
-
-/* ===== HERO ===== */
-header{
-    text-align:center;
-    padding:70px 20px;
-}
-
-header h1{
-    color:#22c55e;
-    font-size:42px;
-}
-
-header p{
-    opacity:.8;
-}
-
-/* ===== CARDS ===== */
-.features{
-    display:flex;
-    justify-content:center;
-    gap:25px;
-    flex-wrap:wrap;
-    margin-top:40px;
-}
-
-.card{
-    background:#0f172a;
-    padding:30px;
-    border-radius:14px;
-    width:260px;
-    text-align:center;
-    box-shadow:0 0 20px rgba(0,0,0,.4);
-}
-
-/* ===== BUTTONS ===== */
-.buttons{
-    margin-top:35px;
-}
-
-.btn{
-    padding:14px 26px;
-    border-radius:10px;
-    text-decoration:none;
-    color:white;
-    margin:10px;
-    display:inline-block;
-    font-weight:bold;
-}
-
-.green{
-    background:#22c55e;
-}
-
-.blue{
-    background:#6366f1;
-}
-
-/* ===== STATUS PAGE ===== */
-#statusPage{
-    display:none;
-    text-align:center;
-    padding:60px 20px;
-}
-
-.statusBox{
-    background:#0f172a;
-    padding:30px;
-    border-radius:12px;
-    display:inline-block;
-}
-
-/* ===== FOOTER ===== */
-footer{
-    text-align:center;
-    padding:30px;
-    opacity:.6;
-}
-
-</style>
+<link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-<!-- NAVBAR -->
 <div class="navbar">
     <div class="logo">GameArea</div>
 
@@ -136,7 +20,7 @@ footer{
     </div>
 </div>
 
-<!-- HOME PAGE -->
+<!-- HOME -->
 <div id="homePage">
 
 <header>
@@ -147,7 +31,7 @@ footer{
 
 <div class="card">
 <h3>Bot Status</h3>
-<p>Status: <span style="color:#22c55e;">Online</span></p>
+<p>Status: <span class="online">Online</span></p>
 </div>
 
 <div class="card">
@@ -163,7 +47,7 @@ footer{
 </div>
 
 <div class="buttons">
-<a class="btn green" href="#">Request Bot</a>
+<a class="btn green" href="#">Embrace Ur Pain</a>
 <a class="btn blue" href="ts3server://51.210.203.176:9987">Join TS3</a>
 </div>
 
@@ -178,7 +62,7 @@ footer{
 
 <div class="statusBox">
 <h3>GameArea Music Bot</h3>
-<p>Status: <span style="color:#22c55e;">Online</span></p>
+<p>Status: <span class="online">Online</span></p>
 <p>Ping: 23ms</p>
 <p>Uptime: 99.9%</p>
 </div>
@@ -189,20 +73,7 @@ footer{
 © 2026 GameArea
 </footer>
 
-<script>
-
-/* SAYFA GEÇİŞLERİ */
-function showStatus(){
-    document.getElementById("homePage").style.display="none";
-    document.getElementById("statusPage").style.display="block";
-}
-
-function showHome(){
-    document.getElementById("homePage").style.display="block";
-    document.getElementById("statusPage").style.display="none";
-}
-
-</script>
+<script src="js/main.js"></script>
 
 </body>
 </html>
