@@ -141,3 +141,14 @@ input, textarea {
     box-shadow: 0 0 20px #22c55e;
     transform: translateY(-3px);
 }
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    margin-left: 25px;
+    font-weight: 500;
+}
+
+.nav-links a:visited {
+    color: white;
+}
