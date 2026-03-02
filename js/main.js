@@ -3,14 +3,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("playBtn");
 
   if (!bgm || !btn) {
-    alert("bgm veya playBtn bulunamadı");
+    console.error("bgm veya playBtn bulunamadı");
     return;
   }
 
+  let playing = false;
+
   btn.addEventListener("click", async () => {
     try {
-      await bgm.play();
-      btn.innerText = "⏸️ Durdur";
+      if (!playing) {
+        await bgm.play();
+        playing = true;
+        btn.textContent = "⏸️ Durdur";
+      } else {
+        bgm.pause();
+        playing = false;
+        btn.textContent = "🔊 Müziği Başlat";
+      }
     } catch (e) {
       alert("Hata: " + e.name);
       console.log(e);
