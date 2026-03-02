@@ -132,3 +132,9 @@ body{
   .hero-wrap{grid-template-columns:1fr}
   .stats{grid-template-columns:repeat(2,1fr)}
 }
+#snow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
