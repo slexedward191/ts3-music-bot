@@ -146,3 +146,21 @@ function confettiBurst() {
     setTimeout(() => conf.remove(), 1600);
   }
 }
+// 🔔 TS3 Katıl butonuna 5 sn sonra shake uyarı
+const ts3Btn = document.querySelector(".join-ts");
+
+if (ts3Btn) {
+  let shaken = false;
+
+  setTimeout(() => {
+    if (!shaken) {
+      ts3Btn.classList.add("shake");
+      setTimeout(() => ts3Btn.classList.remove("shake"), 700);
+      shaken = true;
+    }
+  }, 5000);
+
+  ts3Btn.addEventListener("click", () => {
+    shaken = true; // tıklanınca bir daha uyarmasın
+  });
+}
