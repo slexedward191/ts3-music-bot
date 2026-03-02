@@ -189,3 +189,28 @@ if (heroTitle) {
   // küçük gecikmeyle başlasın
   setTimeout(typeEffect, 500);
 }
+// 🎮 Intro Loader
+document.addEventListener("DOMContentLoaded", () => {
+  const intro = document.getElementById("introLoader");
+  const bar = document.getElementById("introProgress");
+  const percent = document.getElementById("introPercent");
+
+  if (!intro) return;
+
+  let p = 0;
+  const loading = setInterval(() => {
+    p += Math.floor(Math.random() * 12) + 5;
+    if (p >= 100) {
+      p = 100;
+      clearInterval(loading);
+
+      intro.classList.add("intro-hide");
+      setTimeout(() => {
+        intro.remove();
+      }, 600);
+    }
+
+    bar.style.width = p + "%";
+    percent.textContent = p + "%";
+  }, 180);
+});
