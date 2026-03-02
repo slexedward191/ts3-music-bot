@@ -1,21 +1,19 @@
-const bgm = document.getElementById("bgm");
-const hint = document.getElementById("soundHint");
+document.addEventListener("DOMContentLoaded", () => {
+  const bgm = document.getElementById("bgm");
+  const btn = document.getElementById("playBtn");
 
-function startMusic() {
-  if (!bgm) {
-    alert("bgm bulunamadı (audio yok)");
+  if (!bgm || !btn) {
+    alert("bgm veya playBtn bulunamadı");
     return;
   }
-  bgm.play()
-    .then(() => {
-      hint.style.display = "none";
-      document.removeEventListener("click", startMusic);
-    })
-    .catch((e) => {
+
+  btn.addEventListener("click", async () => {
+    try {
+      await bgm.play();
+      btn.innerText = "⏸️ Durdur";
+    } catch (e) {
       alert("Hata: " + e.name);
       console.log(e);
-    });
-}
-
-document.addEventListener("click", startMusic);
-if (hint) hint.addEventListener("click", startMusic);
+    }
+  });
+});
