@@ -28,8 +28,8 @@
 <p>Powered by GameArea</p>
 
 <div class="card">
-<h3>24/7 Online</h3>
-<p>Stable and always running bots.</p>
+<h3>Bot Status</h3>
+<p>Status: <span id="botStatus" class="neon-text">Online</span></p>
 </div>
 
 <div class="card">
@@ -52,6 +52,14 @@
 <footer>
 © 2026 GameArea
 </footer>
+<script>
+// Bot status simülasyonu
+let botStatus = document.getElementById('botStatus');
 
+// 3 saniyede bir Online/Offline değiştir (demo)
+setInterval(() => {
+    botStatus.textContent = botStatus.textContent === "Online" ? "Offline" : "Online";
+}, 3000);
+</script>
 </body>
 </html>
