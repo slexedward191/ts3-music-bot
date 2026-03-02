@@ -164,3 +164,28 @@ if (ts3Btn) {
     shaken = true; // tıklanınca bir daha uyarmasın
   });
 }
+// ✍️ HERO TYPING EFFECT (bozmadan)
+const heroTitle = document.getElementById("heroTitle");
+
+if (heroTitle) {
+  const originalHTML = heroTitle.innerHTML;
+  const textOnly = heroTitle.textContent; // sadece düz yazı
+  heroTitle.textContent = ""; // başta boş olsun
+
+  let i = 0;
+  const speed = 55; // yazma hızı (ms)
+
+  function typeEffect() {
+    if (i < textOnly.length) {
+      heroTitle.textContent += textOnly.charAt(i);
+      i++;
+      setTimeout(typeEffect, speed);
+    } else {
+      // Yazı bittikten sonra span'ı geri koy (renk bozulmasın)
+      heroTitle.innerHTML = originalHTML;
+    }
+  }
+
+  // küçük gecikmeyle başlasın
+  setTimeout(typeEffect, 500);
+}
