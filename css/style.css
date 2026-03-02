@@ -204,3 +204,45 @@ body{
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,.35);
 }
+.owners {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.owner-card {
+  background: rgba(20, 24, 40, .65);
+  border-radius: 16px;
+  padding: 18px 14px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+.owner-card img {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 10px;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.15);
+}
+
+.owner-name {
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.owner-role {
+  font-size: 13px;
+  opacity: .9;
+}
+
+.owner-motto {
+  display: block;
+  font-size: 11px;
+  opacity: .65;
+  letter-spacing: .4px;
+}
