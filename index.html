@@ -71,10 +71,20 @@
 
   <script src="js/main.js"></script>
 <audio id="bgm" src="assets/gamearea.mp3"></audio>
-<button onclick="document.getElementById('bgm').play()">
-  Müziği başlat (test)
+
+<button id="testBtn" style="
+  position:fixed;left:20px;bottom:20px;
+  padding:10px 14px;border-radius:10px;
+  font-weight:700;z-index:9999;">
+  TEST: Müziği Başlat
 </button>
-<script src="js/main.js"></script>
+
+<script>
+  document.getElementById("testBtn").onclick = () => {
+    const a = document.getElementById("bgm");
+    a.play().then(() => console.log("çalıyor")).catch(e => console.log("hata:", e));
+  };
+</script>
 </div>
 </body>
 </html>
