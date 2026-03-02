@@ -610,3 +610,38 @@ body.light #snow{
     pointer-events: none;
   }
 }
+/* 💤 Idle Uyarı */
+.idle-hint {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  background: linear-gradient(135deg, #ff0066, #7c7cff);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  animation: idlePop .4s ease;
+  z-index: 9999;
+}
+
+@keyframes idlePop {
+  from { transform: scale(.6); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* Hero yazısına idle titreme */
+.hero-left h1.idle {
+  animation: idleShake 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes idleShake {
+  from { transform: translateX(-2px); }
+  to   { transform: translateX(2px); }
+}
+
+/* TS3 Katıl parlasın */
+.join-ts.idle {
+  box-shadow: 0 0 25px rgba(0,255,204,.9), 0 0 60px rgba(51,51,255,.6);
+  transform: scale(1.05);
+}
