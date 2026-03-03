@@ -6,67 +6,13 @@
 <style>
 body{margin:0;overflow:hidden;background:#0f172a;font-family:Arial}
 canvas{display:block}
-
-.ui{
-position:fixed;
-top:20px;
-right:20px;
-color:white;
-text-align:right;
-}
-
-.bar{
-width:220px;
-height:16px;
-background:#334155;
-border-radius:8px;
-overflow:hidden;
-margin-bottom:6px;
-}
-
+.ui{position:fixed;top:20px;right:20px;color:white;text-align:right}
+.bar{width:220px;height:16px;background:#334155;border-radius:8px;overflow:hidden;margin-bottom:6px}
 .fill{height:100%}
-
-.upgradePanel{
-position:fixed;
-bottom:20px;
-right:20px;
-background:#1e293b;
-padding:15px;
-border-radius:10px;
-color:white;
-width:180px;
-}
-
-.overlay{
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:rgba(0,0,0,0.8);
-display:none;
-justify-content:center;
-align-items:center;
-}
-
-.menu{
-background:#1e293b;
-padding:30px;
-border-radius:12px;
-color:white;
-text-align:center;
-width:300px;
-}
-
-.menu button{
-display:block;
-width:100%;
-margin:10px 0;
-padding:10px;
-border:none;
-background:#22c55e;
-color:white;
-border-radius:6px;
-cursor:pointer;
-}
+.upgradePanel{position:fixed;bottom:20px;right:20px;background:#1e293b;padding:15px;border-radius:10px;color:white;width:180px}
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center}
+.menu{background:#1e293b;padding:30px;border-radius:12px;color:white;text-align:center;width:300px}
+.menu button{display:block;width:100%;margin:10px 0;padding:10px;border:none;background:#22c55e;color:white;border-radius:6px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -97,38 +43,29 @@ const ctx=canvas.getContext("2d");
 canvas.width=window.innerWidth;
 canvas.height=window.innerHeight;
 
-const arena={
-x:100,
-y:100,
-w:canvas.width-200,
-h:canvas.height-200
-};
+const arena={x:100,y:100,w:canvas.width-200,h:canvas.height-200};
 
-let player={
-x:canvas.width/2,
-y:canvas.height/2,
-r:20,
-speed:4,
-health:100,
-maxHealth:100,
-damage:1,
-fireRate:250
-};
+let player,upgrades,bullets,enemies,keys,mouse,mouseDown;
+let kills,level,killNeed,lastShot,lastUlti,ultiEffectTime,running;
 
-let upgrades={damage:0,speed:0,health:0};
+/* INIT */
+function initGame(){
+player={x:canvas.width/2,y:canvas.height/2,r:20,speed:4,health:100,maxHealth:100,damage:1,fireRate:250};
+upgrades={damage:0,speed:0,health:0};
+bullets=[];enemies=[];
+keys={};mouse={x:0,y:0};mouseDown=false;
+kills=0;level=1;killNeed=10;
+lastShot=0;lastUlti=0;ultiEffectTime=0;
+running=true;
 
-let bullets=[],enemies=[];
-let keys={},mouse={x:0,y:0},mouseDown=false;
+healthBar.style.width="100%";
+xpBar.style.width="0%";
+uDamage.innerText=0;
+uSpeed.innerText=0;
+uHealth.innerText=0;
+}
 
-let kills=0;
-let level=1;
-let killNeed=10;
-
-let lastShot=0;
-let lastUlti=0;
-let ultiEffectTime=0;
-
-let running=true;
+initGame();
 
 /* INPUT */
 document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
@@ -141,50 +78,43 @@ if(e.button===2) useUlti();
 document.addEventListener("mouseup",()=>mouseDown=false);
 document.addEventListener("contextmenu",e=>e.preventDefault());
 
-/* SHOOT */
 function shoot(){
 let now=Date.now();
 if(now-lastShot<player.fireRate) return;
 lastShot=now;
-
 let a=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-bullets.push({
-x:player.x,
-y:player.y,
-dx:Math.cos(a)*8,
-dy:Math.sin(a)*8
-});
+bullets.push({x:player.x,y:player.y,dx:Math.cos(a)*8,dy:Math.sin(a)*8});
 }
 
-/* ULTI */
+/* ULTI FIXED */
 function useUlti(){
 let now=Date.now();
 if(now-lastUlti<10000) return;
 lastUlti=now;
 ultiEffectTime=20;
 
+let removed=0;
 enemies=enemies.filter(e=>{
-return Math.hypot(player.x-e.x,player.y-e.y)>180;
+let d=Math.hypot(player.x-e.x,player.y-e.y);
+if(d<=180){ removed++; return false; }
+return true;
 });
+
+kills+=removed; // 🔥 Ulti kill ekleniyor
 }
 
-/* SPAWN */
 function spawnEnemy(){
 let isBoss=level%5===0;
-
-let enemy={
+enemies.push({
 x:arena.x+Math.random()*arena.w,
 y:arena.y+Math.random()*arena.h,
 r:isBoss?40:20,
 maxHealth:isBoss?30+level:5+level,
 health:isBoss?30+level:5+level,
 speed:isBoss?1.2:1.5+level*0.05
-};
-
-enemies.push(enemy);
+});
 }
 
-/* UPGRADE MENU */
 function openUpgrade(){
 running=false;
 menuOverlay.style.display="flex";
@@ -211,59 +141,45 @@ running=true;
 function gameLoop(){
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
-/* Arena */
 ctx.strokeStyle="white";
 ctx.lineWidth=4;
 ctx.strokeRect(arena.x,arena.y,arena.w,arena.h);
 
 if(running){
 
-/* Movement */
 if(keys["w"]) player.y-=player.speed;
 if(keys["s"]) player.y+=player.speed;
 if(keys["a"]) player.x-=player.speed;
 if(keys["d"]) player.x+=player.speed;
 
-/* Wall collision */
 player.x=Math.max(arena.x+player.r,Math.min(arena.x+arena.w-player.r,player.x));
 player.y=Math.max(arena.y+player.r,Math.min(arena.y+arena.h-player.r,player.y));
 
 if(mouseDown) shoot();
 
-/* Bullets */
 bullets.forEach((b,i)=>{
-b.x+=b.dx;
-b.y+=b.dy;
-
-ctx.beginPath();
-ctx.arc(b.x,b.y,5,0,6.28);
-ctx.fillStyle="#38bdf8";
-ctx.fill();
+b.x+=b.dx;b.y+=b.dy;
+ctx.beginPath();ctx.arc(b.x,b.y,5,0,6.28);ctx.fillStyle="#38bdf8";ctx.fill();
 
 enemies.forEach((e,j)=>{
 if(Math.hypot(b.x-e.x,b.y-e.y)<e.r){
 e.health-=player.damage;
 bullets.splice(i,1);
-if(e.health<=0){
-enemies.splice(j,1);
-kills++;
-}
+if(e.health<=0){enemies.splice(j,1);kills++;}
 }
 });
 });
 
-/* Enemies */
 enemies.forEach(e=>{
 let ang=Math.atan2(player.y-e.y,player.x-e.x);
 e.x+=Math.cos(ang)*e.speed;
 e.y+=Math.sin(ang)*e.speed;
 
-ctx.beginPath();
-ctx.arc(e.x,e.y,e.r,0,6.28);
+ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,6.28);
 ctx.fillStyle=e.r>20?"purple":"red";
 ctx.fill();
 
-/* Enemy Health Bar */
+/* enemy health bar */
 ctx.fillStyle="black";
 ctx.fillRect(e.x-20,e.y-e.r-15,40,5);
 ctx.fillStyle="lime";
@@ -274,7 +190,6 @@ player.health-=0.3;
 }
 });
 
-/* Level */
 if(kills>=killNeed){
 level++;
 kills=0;
@@ -289,15 +204,6 @@ ctx.beginPath();
 ctx.arc(player.x,player.y,player.r,0,6.28);
 ctx.fillStyle="#22c55e";
 ctx.fill();
-
-/* Gun */
-let a=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-ctx.beginPath();
-ctx.moveTo(player.x,player.y);
-ctx.lineTo(player.x+Math.cos(a)*40,player.y+Math.sin(a)*40);
-ctx.strokeStyle="white";
-ctx.lineWidth=6;
-ctx.stroke();
 
 /* Ulti Effect */
 if(ultiEffectTime>0){
@@ -317,16 +223,24 @@ info.innerText="Kill: "+kills+" / "+killNeed+" | Level: "+level;
 let cd=Math.max(0,10-Math.floor((Date.now()-lastUlti)/1000));
 ultiCD.innerText=cd===0?"Hazır":cd+"s";
 
-/* Death */
-if(player.health<=0){
-alert("Oyun Bitti");
-location.reload();
+/* GAME OVER FIX */
+if(player.health<=0 && running){
+running=false;
+menuOverlay.style.display="flex";
+menuBox.innerHTML="<h2>Oyun Bitti</h2>"+
+"<button onclick='resetGame()'>Tekrar Oyna</button>";
 }
 
 requestAnimationFrame(gameLoop);
 }
 
-/* Spawn scaling */
+/* RESET FIX */
+function resetGame(){
+menuOverlay.style.display="none";
+initGame();
+}
+
+/* SPAWN */
 setInterval(()=>{
 if(running){
 let count=1;
