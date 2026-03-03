@@ -2,101 +2,45 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Agarz Clone - Minimal</title>
+    <title>Dino Run - Oyun</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
-        canvas { display: block; background-image: 
-            linear-gradient(#222 1px, transparent 1px),
-            linear-gradient(90deg, #222 1px, transparent 1px);
-            background-size: 50px 50px; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; pointer-events: none; }
-        .score { font-size: 24px; font-weight: bold; color: #00ff88; }
+        body { margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #f7f7f7; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+        canvas { background-color: #fff; border-bottom: 2px solid #535353; cursor: pointer; }
+        #ui { text-align: center; margin-bottom: 10px; pointer-events: none; }
+        .score { font-size: 30px; color: #535353; font-weight: bold; }
+        .msg { color: #888; font-size: 14px; }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <div class="score">Kütle: <span id="mass">10</span></div>
-        <div style="font-size: 12px; color: #aaa;">Fareyi hareket ettir ve küçükleri ye!</div>
+        <div class="score" id="score">00000</div>
+        <div class="msg" id="msg">Zıplamak için Boşluk (Space) veya Ekrana Tıkla!</div>
     </div>
-
     <canvas id="gameCanvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const massDisplay = document.getElementById('mass');
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const msgElement = document.getElementById('msg');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    canvas.width = 800;
+    canvas.height = 200;
 
-        let player = { x: canvas.width/2, y: canvas.height/2, radius: 20, color: '#00ff88' };
-        let mouse = { x: canvas.width/2, y: canvas.height/2 };
-        let foods = [];
-        let enemies = [];
+    let score = 0;
+    let gameSpeed = 6;
+    let isGameOver = false;
+    let obstacles = [];
+    let frame = 0;
 
-        // Başlangıç yiyeceklerini oluştur
-        for (let i = 0; i < 100; i++) spawnFood();
-        // Birkaç tane de bot (düşman) ekleyelim
-        for (let i = 0; i < 5; i++) spawnEnemy();
-
-        function spawnFood() {
-            foods.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                radius: 5,
-                color: `hsl(${Math.random() * 360}, 70%, 60%)`
-            });
-        }
-
-        function spawnEnemy() {
-            enemies.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                radius: 15 + Math.random() * 30,
-                color: '#ff4444',
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2
-            });
-        }
-
-        window.addEventListener('mousemove', (e) => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-        });
-
-        function update() {
-            // Oyuncuyu fareye doğru yumuşakça hareket ettir
-            let dx = mouse.x - player.x;
-            let dy = mouse.y - player.y;
-            player.x += dx * 0.05;
-            player.y += dy * 0.05;
-
-            // Yiyecek yeme kontrolü
-            foods.forEach((food, index) => {
-                let dist = Math.hypot(player.x - food.x, player.y - food.y);
-                if (dist < player.radius + food.radius) {
-                    foods.splice(index, 1);
-                    player.radius += 0.5;
-                    massDisplay.innerText = Math.floor(player.radius);
-                    spawnFood();
-                }
-            });
-
-            // Botların hareketi ve etkileşimi
-            enemies.forEach((enemy, index) => {
-                enemy.x += enemy.vx;
-                enemy.y += enemy.vy;
-
-                // Duvarlara çarpma
-                if (enemy.x < 0 || enemy.x > canvas.width) enemy.vx *= -1;
-                if (enemy.y < 0 || enemy.y > canvas.height) enemy.vy *= -1;
-
-                // Oyuncu düşmanı yerse veya tersi
-                let dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-                if (dist < player.radius + enemy.radius) {
-                    if (player.radius > enemy.radius * 1.1) {
-                        player.radius += enemy.radius / 2;
-                        enemies.splice(index, 1);
-                        spawnEnemy();
-                    } else if (enemy.radius > player.radius * 1.1) {
+    const dino = {
+        x: 50,
+        y: 150,
+        width: 44,
+        height: 44,
+        dy: 0,
+        jumpForce: 12,
+        gravity: 0.6,
+        grounded: false,
+        draw() {
