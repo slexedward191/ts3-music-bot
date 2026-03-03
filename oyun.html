@@ -2,22 +2,19 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>MONSTER ASCENT</title>
+<title>Monster Ascent</title>
 <style>
-body{margin:0;overflow:hidden;background:#0b0f16;font-family:Arial}
+body{margin:0;overflow:hidden;background:#10151f;font-family:Arial}
 canvas{display:block}
 #ui{
 position:absolute;top:10px;right:10px;
 color:white;font-size:14px;text-align:right
 }
 #controls{
-position:absolute;
-top:10px;left:10px;
-color:white;
-font-size:12px;
+position:absolute;top:10px;left:10px;
 background:rgba(0,0,0,0.6);
-padding:8px;
-border:1px solid #555;
+color:white;font-size:12px;
+padding:8px;border:1px solid #444
 }
 #controls table{border-collapse:collapse}
 #controls td{padding:2px 6px}
@@ -25,13 +22,12 @@ border:1px solid #555;
 position:absolute;inset:0;
 display:flex;align-items:center;justify-content:center;
 flex-direction:column;
-background:rgba(0,0,0,.7);
+background:rgba(0,0,0,0.7);
 color:white;visibility:hidden
 }
 button{
-padding:10px 20px;
-background:#222;color:#0f0;
-border:1px solid #0f0;
+padding:10px 20px;margin-top:10px;
+background:#222;color:#0f0;border:1px solid #0f0;
 cursor:pointer
 }
 </style>
@@ -55,30 +51,28 @@ cursor:pointer
 <div id="overlay"></div>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-canvas.width=innerWidth;
-canvas.height=innerHeight;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let keys={};
-addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-let mouse={x:canvas.width/2,y:canvas.height/2};
-canvas.addEventListener("mousemove",e=>{
-mouse.x=e.clientX;
-mouse.y=e.clientY;
+let keys = {};
+window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+let mouse = {x:canvas.width/2,y:canvas.height/2};
+canvas.addEventListener("mousemove", e=>{
+mouse.x = e.clientX;
+mouse.y = e.clientY;
 });
 
-function rand(a,b){return Math.random()*(b-a)+a}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function rand(a,b){ return Math.random()*(b-a)+a; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
-let camera={x:0,y:0};
-let worldSize=4000;
-
-let player={
+let player = {
 x:0,y:0,
-mass:50,
+mass:60,
 hp:100,
 maxHp:100,
 level:1,
@@ -91,16 +85,15 @@ let spawnTimer=0;
 let bossActive=false;
 let gameOver=false;
 
-function radius(m){return Math.sqrt(m)*3}
+function radius(m){ return Math.sqrt(m)*3; }
 
 function spawnEntity(){
-let e={
-x:rand(-worldSize,worldSize),
-y:rand(-worldSize,worldSize),
-mass:rand(20,200+player.level*10),
+entities.push({
+x:rand(-3000,3000),
+y:rand(-3000,3000),
+mass:rand(20,200+player.level*15),
 type:"normal"
-};
-entities.push(e);
+});
 }
 
 function spawnBoss(){
@@ -108,96 +101,91 @@ bossActive=true;
 entities.push({
 x:rand(-1000,1000),
 y:rand(-1000,1000),
-mass:800+player.level*150,
+mass:1000+player.level*200,
 type:"boss"
 });
 }
 
 function gainXP(v){
-player.xp+=v;
-if(player.xp>=player.nextXp){
-player.xp=0;
+player.xp += v;
+if(player.xp >= player.nextXp){
+player.xp = 0;
 player.level++;
-player.nextXp*=1.4;
-player.mass+=30;
-if(player.level%5===0)spawnBoss();
+player.nextXp *= 1.4;
+player.mass += 40;
+if(player.level % 5 === 0) spawnBoss();
 }
 }
 
 function update(dt){
+if(gameOver) return;
 
-if(gameOver)return;
+let angle = Math.atan2(mouse.y-canvas.height/2, mouse.x-canvas.width/2);
+let speed = 250/(Math.sqrt(player.mass)*0.25);
 
-let angleMouse=Math.atan2(mouse.y-canvas.height/2,mouse.x-canvas.width/2);
-let speed=200/(Math.sqrt(player.mass)*0.2);
+player.x += Math.cos(angle)*speed*dt;
+player.y += Math.sin(angle)*speed*dt;
 
-player.x+=Math.cos(angleMouse)*speed*dt;
-player.y+=Math.sin(angleMouse)*speed*dt;
+if(keys["w"]) player.y -= speed*dt;
+if(keys["s"]) player.y += speed*dt;
+if(keys["a"]) player.x -= speed*dt;
+if(keys["d"]) player.x += speed*dt;
 
-if(keys["w"])player.y-=speed*dt;
-if(keys["s"])player.y+=speed*dt;
-if(keys["a"])player.x-=speed*dt;
-if(keys["d"])player.x+=speed*dt;
-
-camera.x=player.x;
-camera.y=player.y;
-
-entities.forEach((e,i)=>{
-let dx=player.x-e.x;
-let dy=player.y-e.y;
-let dist=Math.hypot(dx,dy);
-
-if(e.type==="boss"){
-let a=Math.atan2(player.y-e.y,player.x-e.x);
-e.x+=Math.cos(a)*40*dt;
-e.y+=Math.sin(a)*40*dt;
-}
+for(let i=entities.length-1;i>=0;i--){
+let e = entities[i];
+let dx = player.x - e.x;
+let dy = player.y - e.y;
+let dist = Math.hypot(dx,dy);
 
 if(e.mass < player.mass*0.9){
-if(dist<radius(player.mass)){
-player.mass+=e.mass*0.5;
+if(dist < radius(player.mass)){
+player.mass += e.mass*0.5;
 gainXP(e.mass*0.3);
 entities.splice(i,1);
 }
-}else if(e.mass > player.mass*1.1){
-let a=Math.atan2(player.y-e.y,player.x-e.x);
-e.x+=Math.cos(a)*70*dt;
-e.y+=Math.sin(a)*70*dt;
-if(dist<radius(e.mass)){
-player.hp-=40*dt;
 }
-}else{
-if(dist<radius(player.mass)){
-player.hp-=20*dt;
+else if(e.mass > player.mass*1.1){
+let a = Math.atan2(player.y-e.y, player.x-e.x);
+e.x += Math.cos(a)*60*dt;
+e.y += Math.sin(a)*60*dt;
+
+if(dist < radius(e.mass)){
+player.hp -= 50*dt;
+}
+}
+else{
+if(dist < radius(player.mass)){
+player.hp -= 20*dt;
 }
 }
 
-if(player.hp<=0)endGame();
-});
+if(player.hp <= 0){
+endGame();
+}
+}
 
-spawnTimer-=dt;
-if(spawnTimer<=0){
+spawnTimer -= dt;
+if(spawnTimer <= 0){
 spawnEntity();
-spawnTimer=0.6;
+spawnTimer = 0.7;
 }
 
-player.hp=clamp(player.hp,0,player.maxHp);
+player.hp = clamp(player.hp,0,player.maxHp);
 }
 
 function draw(){
-ctx.fillStyle="#0b0f16";
+ctx.fillStyle="#10151f";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
 ctx.save();
-ctx.translate(canvas.width/2-player.x,canvas.height/2-player.y);
+ctx.translate(canvas.width/2-player.x, canvas.height/2-player.y);
 
-entities.forEach(e=>{
+for(let e of entities){
 ctx.beginPath();
 ctx.arc(e.x,e.y,radius(e.mass),0,Math.PI*2);
-if(e.type==="boss")ctx.fillStyle="purple";
-else ctx.fillStyle="red";
+ctx.fillStyle = e.type==="boss" ? "purple" : "red";
 ctx.fill();
-});
+}
 
 ctx.beginPath();
 ctx.arc(player.x,player.y,radius(player.mass),0,Math.PI*2);
@@ -206,7 +194,7 @@ ctx.fill();
 
 ctx.restore();
 
-document.getElementById("ui").innerHTML=
+document.getElementById("ui").innerHTML =
 "Mass: "+Math.floor(player.mass)+
 "<br>HP: "+Math.floor(player.hp)+"/"+player.maxHp+
 "<br>Level: "+player.level+
@@ -214,16 +202,16 @@ document.getElementById("ui").innerHTML=
 }
 
 function endGame(){
-gameOver=true;
-let o=document.getElementById("overlay");
-o.style.visibility="visible";
-o.innerHTML="<h1>YOU WERE EATEN</h1><button onclick='location.reload()'>Restart</button>";
+gameOver = true;
+let overlay = document.getElementById("overlay");
+overlay.style.visibility="visible";
+overlay.innerHTML="<h1>You Were Eaten</h1><button onclick='location.reload()'>Restart</button>";
 }
 
 let last=0;
 function loop(t){
-let dt=(t-last)/1000;
-last=t;
+let dt = (t-last)/1000;
+last = t;
 update(dt);
 draw();
 requestAnimationFrame(loop);
