@@ -17,210 +17,250 @@ canvas{
   display:block;
 }
 
-.back-btn {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: white;
-  padding: 10px 18px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: bold;
-  z-index: 1000;
+.back-btn{
+  position:fixed;
+  top:20px;
+  left:20px;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+  padding:10px 18px;
+  border-radius:8px;
+  text-decoration:none;
+  font-weight:bold;
+  z-index:1000;
 }
 
-.score{
+.ui{
   position:fixed;
   top:20px;
   right:20px;
   color:white;
-  font-weight:bold;
+  text-align:right;
 }
 
-.game-over{
+.health-bar{
+  width:200px;
+  height:15px;
+  background:#334155;
+  border-radius:8px;
+  overflow:hidden;
+  margin-bottom:8px;
+}
+
+.health{
+  height:100%;
+  background:#22c55e;
+}
+
+.levelup{
   position:fixed;
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
   background:#1e293b;
-  padding:30px;
+  padding:25px;
   border-radius:12px;
+  display:none;
   text-align:center;
   color:white;
-  display:none;
 }
 
-.game-over button{
-  margin-top:15px;
-  padding:10px 20px;
-  border:none;
+.levelup button{
+  display:block;
+  margin:10px auto;
+  padding:8px 15px;
   background:#22c55e;
-  color:white;
+  border:none;
   border-radius:6px;
   cursor:pointer;
+  color:white;
 }
 </style>
 </head>
 <body>
 
 <a href="index.html" class="back-btn">← Ana Sayfaya Dön</a>
-<div class="score" id="score">Skor: 0</div>
-<div class="game-over" id="gameOver">
-  <h2>Oyun Bitti</h2>
-  <p id="finalScore"></p>
-  <button onclick="resetGame()">Tekrar Oyna</button>
+
+<div class="ui">
+  <div class="health-bar">
+    <div class="health" id="healthBar"></div>
+  </div>
+  <div id="info">Skor: 0 | Level: 1</div>
 </div>
+
+<div class="levelup" id="upgradeMenu">
+  <h3>Level Up!</h3>
+  <button onclick="upgrade('speed')">Hız +</button>
+  <button onclick="upgrade('damage')">Hasar +</button>
+  <button onclick="upgrade('fireRate')">Ateş Hızı +</button>
+</div>
+
 <canvas id="game"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let player = {
-  x: canvas.width/2,
-  y: canvas.height/2,
-  radius: 25,
-  speed: 4
+let player={
+  x:canvas.width/2,
+  y:canvas.height/2,
+  radius:20,
+  speed:4,
+  health:100,
+  maxHealth:100,
+  damage:1,
+  fireRate:300
 };
 
-let bullets = [];
-let enemies = [];
-let keys = {};
-let mouse = {x:0,y:0};
-let score = 0;
-let enemySpeed = 1.5;
-let gameRunning = true;
+let bullets=[];
+let enemies=[];
+let keys={};
+let mouse={x:0,y:0};
+let score=0;
+let level=1;
+let exp=0;
+let expToNext=10;
+let lastShot=0;
+let dashCooldown=0;
 
-document.addEventListener("keydown", e=> keys[e.key.toLowerCase()] = true);
-document.addEventListener("keyup", e=> keys[e.key.toLowerCase()] = false);
-document.addEventListener("mousemove", e=>{
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
-});
-document.addEventListener("click", shoot);
+document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+document.addEventListener("mousemove",e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+document.addEventListener("mousedown",shoot);
+
+function drawGrid(){
+  ctx.strokeStyle="#1e293b";
+  for(let i=0;i<canvas.width;i+=40){
+    ctx.beginPath();
+    ctx.moveTo(i,0);
+    ctx.lineTo(i,canvas.height);
+    ctx.stroke();
+  }
+  for(let i=0;i<canvas.height;i+=40){
+    ctx.beginPath();
+    ctx.moveTo(0,i);
+    ctx.lineTo(canvas.width,i);
+    ctx.stroke();
+  }
+}
 
 function shoot(){
-  if(!gameRunning) return;
+  let now=Date.now();
+  if(now-lastShot<player.fireRate) return;
+  lastShot=now;
 
-  let angle = Math.atan2(mouse.y-player.y, mouse.x-player.x);
-
+  let angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
   bullets.push({
     x:player.x,
     y:player.y,
-    dx:Math.cos(angle)*7,
-    dy:Math.sin(angle)*7
+    dx:Math.cos(angle)*8,
+    dy:Math.sin(angle)*8,
+    damage:player.damage
   });
 }
 
-function spawnEnemy(){
-  let edge = Math.floor(Math.random()*4);
-  let x,y;
-
-  if(edge===0){ x=0; y=Math.random()*canvas.height; }
-  if(edge===1){ x=canvas.width; y=Math.random()*canvas.height; }
-  if(edge===2){ x=Math.random()*canvas.width; y=0; }
-  if(edge===3){ x=Math.random()*canvas.width; y=canvas.height; }
-
-  enemies.push({x,y});
+function spawnEnemy(boss=false){
+  let x=Math.random()<0.5?0:canvas.width;
+  let y=Math.random()*canvas.height;
+  enemies.push({
+    x,y,
+    radius: boss?50:20,
+    health: boss?30:3,
+    speed: boss?1:2,
+    boss:boss
+  });
 }
 
 function update(){
-  if(!gameRunning) return;
-
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawGrid();
 
-  // Hareket
-  if(keys["w"]) player.y -= player.speed;
-  if(keys["s"]) player.y += player.speed;
-  if(keys["a"]) player.x -= player.speed;
-  if(keys["d"]) player.x += player.speed;
+  if(keys["w"]) player.y-=player.speed;
+  if(keys["s"]) player.y+=player.speed;
+  if(keys["a"]) player.x-=player.speed;
+  if(keys["d"]) player.x+=player.speed;
 
-  // Oyuncu çiz
+  if(keys["shift"] && dashCooldown<=0){
+    player.x+=Math.cos(Math.atan2(mouse.y-player.y,mouse.x-player.x))*100;
+    player.y+=Math.sin(Math.atan2(mouse.y-player.y,mouse.x-player.x))*100;
+    dashCooldown=100;
+  }
+  dashCooldown--;
+
   ctx.beginPath();
-  ctx.arc(player.x, player.y, player.radius, 0, Math.PI*2);
+  ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);
   ctx.fillStyle="#22c55e";
   ctx.fill();
 
-  // Silah yönü
-  let angle = Math.atan2(mouse.y-player.y, mouse.x-player.x);
-  ctx.beginPath();
-  ctx.moveTo(player.x, player.y);
-  ctx.lineTo(player.x + Math.cos(angle)*40, player.y + Math.sin(angle)*40);
-  ctx.strokeStyle="white";
-  ctx.lineWidth=5;
-  ctx.stroke();
-
-  // Mermiler
   bullets.forEach((b,i)=>{
-    b.x += b.dx;
-    b.y += b.dy;
-
+    b.x+=b.dx;
+    b.y+=b.dy;
     ctx.beginPath();
     ctx.arc(b.x,b.y,5,0,Math.PI*2);
     ctx.fillStyle="#38bdf8";
     ctx.fill();
 
     enemies.forEach((e,j)=>{
-      let dist = Math.hypot(b.x-e.x,b.y-e.y);
-      if(dist < 20){
-        enemies.splice(j,1);
+      let dist=Math.hypot(b.x-e.x,b.y-e.y);
+      if(dist<e.radius){
+        e.health-=b.damage;
         bullets.splice(i,1);
-        score++;
-        document.getElementById("score").innerText="Skor: "+score;
+        if(e.health<=0){
+          enemies.splice(j,1);
+          score++;
+          exp++;
+        }
       }
     });
   });
 
-  // Düşmanlar
   enemies.forEach((e,i)=>{
-    let angle = Math.atan2(player.y-e.y, player.x-e.x);
-    e.x += Math.cos(angle)*enemySpeed;
-    e.y += Math.sin(angle)*enemySpeed;
+    let angle=Math.atan2(player.y-e.y,player.x-e.x);
+    e.x+=Math.cos(angle)*e.speed;
+    e.y+=Math.sin(angle)*e.speed;
 
     ctx.beginPath();
-    ctx.arc(e.x,e.y,20,0,Math.PI*2);
-    ctx.fillStyle="#ef4444";
+    ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);
+    ctx.fillStyle=e.boss?"purple":"#ef4444";
     ctx.fill();
 
-    let dist = Math.hypot(player.x-e.x,player.y-e.y);
-    if(dist < player.radius+20){
-      endGame();
+    if(Math.hypot(player.x-e.x,player.y-e.y)<player.radius+e.radius){
+      player.health-=0.5;
     }
   });
+
+  if(exp>=expToNext){
+    level++;
+    exp=0;
+    expToNext+=5;
+    document.getElementById("upgradeMenu").style.display="block";
+  }
+
+  document.getElementById("healthBar").style.width=
+    (player.health/player.maxHealth*100)+"%";
+
+  document.getElementById("info").innerText=
+    "Skor: "+score+" | Level: "+level;
+
+  if(player.health<=0){
+    alert("Oyun Bitti! Skor: "+score);
+    location.reload();
+  }
 
   requestAnimationFrame(update);
 }
 
-function endGame(){
-  gameRunning=false;
-  document.getElementById("gameOver").style.display="block";
-  document.getElementById("finalScore").innerText="Skor: "+score;
+function upgrade(type){
+  if(type==="speed") player.speed+=1;
+  if(type==="damage") player.damage+=1;
+  if(type==="fireRate") player.fireRate-=40;
+  document.getElementById("upgradeMenu").style.display="none";
 }
 
-function resetGame(){
-  bullets=[];
-  enemies=[];
-  score=0;
-  enemySpeed=1.5;
-  player.x=canvas.width/2;
-  player.y=canvas.height/2;
-  document.getElementById("score").innerText="Skor: 0";
-  document.getElementById("gameOver").style.display="none";
-  gameRunning=true;
-  update();
-}
-
-setInterval(()=>{
-  if(gameRunning){
-    spawnEnemy();
-    enemySpeed += 0.05;
-  }
-},1000);
+setInterval(()=>spawnEnemy(),1500);
+setInterval(()=>spawnEnemy(true),20000);
 
 update();
 </script>
