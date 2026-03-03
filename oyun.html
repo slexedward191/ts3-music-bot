@@ -1,158 +1,257 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-<meta charset="UTF-8">
-<title>Mini Diep.io Clone</title>
-<style>
-    body {
-        margin: 0;
-        overflow: hidden;
-        background: #111;
-    }
-    canvas {
-        display: block;
-        background: #1e1e1e;
-    }
-</style>
+    <meta charset="UTF-8">
+    <title>Diep.io Clone - oyun.html</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #b9bbbe; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; cursor: crosshair; }
+        #overlay {
+            position: absolute; bottom: 20px; left: 20px;
+            background: rgba(0, 0, 0, 0.4); padding: 15px;
+            border-radius: 10px; color: white; pointer-events: none;
+            border: 2px solid #555;
+        }
+        #level-up {
+            position: absolute; top: 20%; left: 50%;
+            transform: translateX(-50%); color: #00b2e1;
+            text-shadow: 2px 2px #000; font-size: 32px; font-weight: bold; display: none;
+        }
+    </style>
 </head>
 <body>
-<canvas id="game"></canvas>
 
-<script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+    <div id="overlay">
+        <div id="score">Puan: 0</div>
+        <div id="level">Seviye: 1</div>
+        <div id="class">Sınıf: Temel Tank</div>
+        <div style="font-size: 11px; margin-top: 5px; color: #aaa;">WASD: Hareket | Mouse: Ateş</div>
+    </div>
+    <div id="level-up">SINIF YÜKSELTİLDİ!</div>
+    
+    <canvas id="gameCanvas"></canvas>
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
-let keys = {};
-let bullets = [];
-let enemies = [];
-let xp = 0;
-let level = 1;
+        // Oyun Ayarları
+        const WORLD_SIZE = 4000; 
+        let score = 0;
+        let level = 1;
+        let tankClass = "Basic"; 
 
-const player = {
-    x: canvas.width/2,
-    y: canvas.height/2,
-    radius: 25,
-    speed: 4,
-    angle: 0,
-    color: "cyan"
-};
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+        const keys = {};
+        const mouse = { x: 0, y: 0, down: false };
 
-canvas.addEventListener("mousemove", e => {
-    const dx = e.clientX - player.x;
-    const dy = e.clientY - player.y;
-    player.angle = Math.atan2(dy, dx);
-});
+        window.addEventListener("keydown", e => keys[e.code] = true);
+        window.addEventListener("keyup", e => keys[e.code] = false);
+        window.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener("mousedown", () => mouse.down = true);
+        window.addEventListener("mouseup", () => mouse.down = false);
 
-canvas.addEventListener("mousedown", () => {
-    bullets.push({
-        x: player.x,
-        y: player.y,
-        dx: Math.cos(player.angle)*8,
-        dy: Math.sin(player.angle)*8,
-        radius: 6
-    });
-});
-
-function spawnEnemy() {
-    enemies.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height,
-        size: 30,
-        hp: 3
-    });
-}
-
-setInterval(spawnEnemy, 1500);
-
-function update() {
-    if(keys["w"]) player.y -= player.speed;
-    if(keys["s"]) player.y += player.speed;
-    if(keys["a"]) player.x -= player.speed;
-    if(keys["d"]) player.x += player.speed;
-
-    bullets.forEach((b, i) => {
-        b.x += b.dx;
-        b.y += b.dy;
-
-        enemies.forEach((e, j) => {
-            if(Math.abs(b.x - e.x) < e.size/2 &&
-               Math.abs(b.y - e.y) < e.size/2) {
-                e.hp--;
-                bullets.splice(i,1);
-                if(e.hp <= 0){
-                    enemies.splice(j,1);
-                    xp += 10;
-                    if(xp >= level*50){
-                        xp = 0;
-                        level++;
-                        player.radius += 3;
-                    }
-                }
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 6 + 2;
+                this.speedX = (Math.random() - 0.5) * 12;
+                this.speedY = (Math.random() - 0.5) * 12;
+                this.color = color;
+                this.life = 1.0;
             }
-        });
-    });
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= 0.025;
+            }
+            draw(camX, camY) {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x - camX, this.y - camY, this.size, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
 
-    bullets = bullets.filter(b =>
-        b.x>0 && b.x<canvas.width &&
-        b.y>0 && b.y<canvas.height);
-}
+        class Bullet {
+            constructor(x, y, angle) {
+                this.x = x; this.y = y;
+                this.angle = angle;
+                this.speed = 12;
+                this.radius = 9;
+                this.life = 80;
+            }
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.life--;
+            }
+            draw(camX, camY) {
+                ctx.beginPath();
+                ctx.arc(this.x - camX, this.y - camY, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = "#00b2e1";
+                ctx.fill();
+                ctx.strokeStyle = "#555";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
 
-function drawPlayer(){
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.angle);
+        class Shape {
+            constructor() { this.spawn(); }
+            spawn() {
+                this.x = Math.random() * WORLD_SIZE;
+                this.y = Math.random() * WORLD_SIZE;
+                const type = Math.random();
+                if (type > 0.92) { this.type = 'pentagon'; this.size = 28; this.color = '#768dfc'; this.hp = 6; }
+                else if (type > 0.7) { this.type = 'triangle'; this.size = 22; this.color = '#fc7677'; this.hp = 3; }
+                else { this.type = 'square'; this.size = 20; this.color = '#ffe869'; this.hp = 1; }
+                this.rot = Math.random() * Math.PI;
+                this.rotSpeed = (Math.random() - 0.5) * 0.05;
+            }
+            draw(camX, camY) {
+                ctx.fillStyle = this.color;
+                ctx.strokeStyle = "#555";
+                ctx.lineWidth = 3;
+                ctx.save();
+                ctx.translate(this.x - camX, this.y - camY);
+                this.rot += this.rotSpeed;
+                ctx.rotate(this.rot);
+                if(this.type === 'square') {
+                    ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                } else if(this.type === 'triangle') {
+                    ctx.beginPath();
+                    for(let i=0; i<3; i++) ctx.lineTo(this.size * Math.cos(i * 2 * Math.PI / 3), this.size * Math.sin(i * 2 * Math.PI / 3));
+                    ctx.closePath(); ctx.fill(); ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    for(let i=0; i<5; i++) ctx.lineTo(this.size * Math.cos(i * 2 * Math.PI / 5), this.size * Math.sin(i * 2 * Math.PI / 5));
+                    ctx.closePath(); ctx.fill(); ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
 
-    ctx.fillStyle = player.color;
-    ctx.beginPath();
-    ctx.arc(0,0,player.radius,0,Math.PI*2);
-    ctx.fill();
+        const player = {
+            x: WORLD_SIZE / 2, y: WORLD_SIZE / 2,
+            radius: 24, speed: 5, angle: 0,
+            bullets: [], particles: [],
+            lastShot: 0, fireRate: 400
+        };
 
-    ctx.fillStyle = "white";
-    ctx.fillRect(0,-5,40,10);
+        const shapes = Array.from({ length: 200 }, () => new Shape());
 
-    ctx.restore();
-}
+        function update() {
+            if (keys['KeyW']) player.y -= player.speed;
+            if (keys['KeyS']) player.y += player.speed;
+            if (keys['KeyA']) player.x -= player.speed;
+            if (keys['KeyD']) player.x += player.speed;
 
-function drawBullets(){
-    ctx.fillStyle = "yellow";
-    bullets.forEach(b=>{
-        ctx.beginPath();
-        ctx.arc(b.x,b.y,b.radius,0,Math.PI*2);
-        ctx.fill();
-    });
-}
+            player.x = Math.max(0, Math.min(WORLD_SIZE, player.x));
+            player.y = Math.max(0, Math.min(WORLD_SIZE, player.y));
 
-function drawEnemies(){
-    ctx.fillStyle = "orange";
-    enemies.forEach(e=>{
-        ctx.fillRect(e.x-e.size/2,e.y-e.size/2,e.size,e.size);
-    });
-}
+            const camX = player.x - canvas.width / 2;
+            const camY = player.y - canvas.height / 2;
+            player.angle = Math.atan2(mouse.y - (player.y - camY), mouse.x - (player.x - camX));
 
-function drawUI(){
-    ctx.fillStyle="white";
-    ctx.font="20px Arial";
-    ctx.fillText("Level: "+level,20,30);
-    ctx.fillText("XP: "+xp+"/"+(level*50),20,60);
-}
+            if (mouse.down && Date.now() - player.lastShot > player.fireRate) {
+                if (tankClass === "Basic") {
+                    player.bullets.push(new Bullet(player.x, player.y, player.angle));
+                } else if (tankClass === "Twin") {
+                    player.bullets.push(new Bullet(player.x + Math.cos(player.angle + Math.PI/2)*12, player.y + Math.sin(player.angle + Math.PI/2)*12, player.angle));
+                    player.bullets.push(new Bullet(player.x + Math.cos(player.angle - Math.PI/2)*12, player.y + Math.sin(player.angle - Math.PI/2)*12, player.angle));
+                }
+                player.lastShot = Date.now();
+            }
 
-function gameLoop(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    update();
-    drawPlayer();
-    drawBullets();
-    drawEnemies();
-    drawUI();
-    requestAnimationFrame(gameLoop);
-}
+            player.bullets.forEach((b, bi) => {
+                b.update();
+                if (b.life <= 0) player.bullets.splice(bi, 1);
+                shapes.forEach((s, si) => {
+                    if (Math.hypot(b.x - s.x, b.y - s.y) < s.size + b.radius) {
+                        s.hp--;
+                        player.bullets.splice(bi, 1);
+                        if (s.hp <= 0) {
+                            for(let i=0; i<8; i++) player.particles.push(new Particle(s.x, s.y, s.color));
+                            score += (s.type === 'pentagon' ? 100 : s.type === 'triangle' ? 50 : 20);
+                            s.spawn();
+                            checkLevelUp();
+                        }
+                    }
+                });
+            });
 
-gameLoop();
-</script>
+            player.particles.forEach((p, i) => {
+                p.update();
+                if (p.life <= 0) player.particles.splice(i, 1);
+            });
+
+            draw(camX, camY);
+            requestAnimationFrame(update);
+        }
+
+        function checkLevelUp() {
+            level = Math.floor(score / 300) + 1;
+            document.getElementById("score").innerText = `Puan: ${score}`;
+            document.getElementById("level").innerText = `Seviye: ${level}`;
+            if (level >= 3 && tankClass === "Basic") {
+                tankClass = "Twin";
+                player.fireRate = 250;
+                document.getElementById("class").innerText = `Sınıf: Çiftli Tank`;
+                const el = document.getElementById("level-up");
+                el.style.display = "block";
+                setTimeout(() => el.style.display = "none", 2500);
+            }
+        }
+
+        function draw(camX, camY) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Arka Plan Izgarası
+            ctx.strokeStyle = "#c0c0c0";
+            ctx.lineWidth = 1;
+            for(let x = -camX % 60; x < canvas.width; x += 60) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for(let y = -camY % 60; y < canvas.height; y += 60) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            shapes.forEach(s => s.draw(camX, camY));
+            player.bullets.forEach(b => b.draw(camX, camY));
+            player.particles.forEach(p => p.draw(camX, camY));
+
+            // Tank Çizimi
+            ctx.save();
+            ctx.translate(player.x - camX, player.y - camY);
+            ctx.rotate(player.angle);
+            ctx.fillStyle = "#999";
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 3;
+            if(tankClass === "Twin") {
+                ctx.fillRect(5, -18, 30, 14); ctx.strokeRect(5, -18, 30, 14);
+                ctx.fillRect(5, 4, 30, 14); ctx.strokeRect(5, 4, 30, 14);
+            } else {
+                ctx.fillRect(5, -11, 35, 22); ctx.strokeRect(5, -11, 35, 22);
+            }
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.arc(player.x - camX, player.y - camY, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "#00b2e1";
+            ctx.fill();
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
+
+        update();
+        window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    </script>
 </body>
 </html>
