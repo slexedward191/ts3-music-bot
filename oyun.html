@@ -2,178 +2,293 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Dino Game</title>
+<title>Emoji Arena</title>
 <style>
-body{
-margin:0;
-overflow:hidden;
-background:#f7f7f7;
-font-family:Arial;
+body{margin:0;overflow:hidden;background:#111827;font-family:Arial;color:white}
+canvas{display:block}
+#hud{position:fixed;top:10px;left:10px;font-size:14px}
+#upgradePanel{
+position:fixed;
+right:10px;
+bottom:10px;
+background:rgba(0,0,0,0.7);
+padding:10px;
+border-radius:10px;
+width:200px;
 }
-canvas{
-display:block;
-margin:0 auto;
-background:#ffffff;
+.upg{
+background:#1f2937;
+margin:5px 0;
+padding:8px;
+border-radius:8px;
+cursor:pointer;
 }
-#info{
-position:absolute;
-top:20px;
-left:50%;
-transform:translateX(-50%);
-font-size:20px;
-}
-#gameover{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-font-size:28px;
-display:none;
-text-align:center;
+.upg:hover{background:#374151}
+#howto{
+position:fixed;
+left:10px;
+top:120px;
+background:#1f2937;
+padding:10px;
+border-radius:10px;
+width:200px;
 }
 </style>
 </head>
 <body>
 
-<div id="info">Score: 0</div>
-<div id="gameover">
-GAME OVER<br><br>
-Press SPACE to Restart
+<audio id="radio" autoplay loop>
+<source src="https://playerservices.streamtheworld.com/api/livestream-redirect/VIRGINRADIO.mp3">
+</audio>
+
+<div id="hud"></div>
+
+<div id="howto">
+<b>🎮 HOW TO PLAY</b><br><br>
+WASD - Move<br>
+Mouse - Aim<br>
+Left Click - Shoot<br>
+Right Click - ULTI (5s CD)<br>
+Shift - Dash<br>
+Kill enemies = XP<br>
+Level up = Upgrade
 </div>
+
+<div id="upgradePanel"></div>
 
 <canvas id="game"></canvas>
 
 <script>
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
 
-canvas.width=800;
-canvas.height=300;
+window.addEventListener("resize",()=>{
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+});
 
-let groundY=250;
+const arena={x:100,y:100,w:canvas.width-200,h:canvas.height-200};
 
-/* PLAYER */
-let dino={
-x:80,
-y:groundY,
-width:40,
-height:40,
-vy:0,
-gravity:0.8,
-jumpPower:-15,
-jumping:false
+let keys={},mouse={x:0,y:0,down:false,right:false};
+document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+canvas.addEventListener("mousemove",e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+canvas.addEventListener("mousedown",e=>{
+if(e.button===0)mouse.down=true;
+if(e.button===2){e.preventDefault();mouse.right=true;}
+});
+canvas.addEventListener("mouseup",e=>{
+if(e.button===0)mouse.down=false;
+if(e.button===2)mouse.right=false;
+});
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+
+function rand(a,b){return Math.random()*(b-a)+a;}
+
+let player={
+x:canvas.width/2,
+y:canvas.height/2,
+size:30,
+speed:4,
+hp:100,
+maxHp:100,
+damage:20,
+fireRate:400,
+lastShot:0,
+xp:0,
+level:1,
+ultiCD:0,
+dashCD:0
 };
 
-/* GAME STATE */
-let obstacles=[];
-let speed=6;
-let score=0;
-let gameOver=false;
+let enemies=[];
+let bullets=[];
+let bosses=0;
 
-/* CONTROLS */
-document.addEventListener("keydown",e=>{
-if(e.code==="Space"){
-if(gameOver){
-restart();
-}else if(!dino.jumping){
-dino.vy=dino.jumpPower;
-dino.jumping=true;
-}
-}
-});
-
-/* OBSTACLE SPAWN */
-function spawnObstacle(){
-let height=40;
-obstacles.push({
-x:canvas.width,
-y:groundY,
-width:20+Math.random()*20,
-height:height
+function spawnEnemy(){
+if(enemies.length>50)return;
+let levelScale=1+player.level*0.05;
+enemies.push({
+x:rand(arena.x,arena.x+arena.w),
+y:rand(arena.y,arena.y+arena.h),
+size:rand(20,40),
+hp:50*levelScale,
+maxHp:50*levelScale,
+speed:1+player.level*0.02,
+shape:Math.floor(rand(0,3))
 });
 }
-setInterval(()=>{
-if(!gameOver) spawnObstacle();
-},1500);
+setInterval(spawnEnemy,800);
 
-/* UPDATE */
+function spawnBoss(){
+if(bosses>=3)return;
+bosses++;
+let scale=player.level*1.5;
+enemies.push({
+x:rand(arena.x,arena.x+arena.w),
+y:rand(arena.y,arena.y+arena.h),
+size:80,
+hp:400*scale,
+maxHp:400*scale,
+speed:1,
+boss:true,
+shape:2
+});
+}
+
+function shoot(){
+let now=Date.now();
+if(now-player.lastShot<player.fireRate)return;
+player.lastShot=now;
+let angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+bullets.push({
+x:player.x,
+y:player.y,
+dx:Math.cos(angle)*8,
+dy:Math.sin(angle)*8
+});
+}
+
+function ulti(){
+if(player.ultiCD>0)return;
+player.ultiCD=300;
+enemies.forEach(e=>e.hp*=0.5);
+}
+
 function update(){
+if(keys["w"])player.y-=player.speed;
+if(keys["s"])player.y+=player.speed;
+if(keys["a"])player.x-=player.speed;
+if(keys["d"])player.x+=player.speed;
 
-if(gameOver) return;
-
-/* DINO PHYSICS */
-dino.vy+=dino.gravity;
-dino.y+=dino.vy;
-
-if(dino.y>=groundY){
-dino.y=groundY;
-dino.vy=0;
-dino.jumping=false;
+if(keys["shift"] && player.dashCD<=0){
+player.x+= (mouse.x-player.x)*0.3;
+player.y+= (mouse.y-player.y)*0.3;
+player.dashCD=100;
 }
 
-/* OBSTACLES */
-obstacles.forEach((o,i)=>{
-o.x-=speed;
+player.x=Math.max(arena.x,Math.min(arena.x+arena.w,player.x));
+player.y=Math.max(arena.y,Math.min(arena.y+arena.h,player.y));
 
-if(o.x+o.width<0){
-obstacles.splice(i,1);
-}
+if(mouse.down)shoot();
+if(mouse.right)ulti();
 
-/* COLLISION */
-if(
-dino.x < o.x+o.width &&
-dino.x+dino.width > o.x &&
-dino.y < o.y+o.height &&
-dino.y+dino.height > o.y
-){
-gameOver=true;
-document.getElementById("gameover").style.display="block";
-}
+if(player.ultiCD>0)player.ultiCD--;
+if(player.dashCD>0)player.dashCD--;
+
+bullets.forEach((b,i)=>{
+b.x+=b.dx;
+b.y+=b.dy;
+if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height)
+bullets.splice(i,1);
 });
 
-/* SPEED INCREASE */
-speed+=0.002;
+enemies.forEach((e,ei)=>{
+let angle=Math.atan2(player.y-e.y,player.x-e.x);
+e.x+=Math.cos(angle)*e.speed;
+e.y+=Math.sin(angle)*e.speed;
 
-/* SCORE */
-score++;
-document.getElementById("info").innerText="Score: "+score;
+let dx=e.x-player.x,dy=e.y-player.y;
+if(Math.sqrt(dx*dx+dy*dy)<e.size+player.size){
+player.hp-=0.3;
+if(player.hp<=0)location.reload();
 }
 
-/* DRAW */
+bullets.forEach((b,bi)=>{
+let dx=e.x-b.x,dy=e.y-b.y;
+if(Math.sqrt(dx*dx+dy*dy)<e.size){
+e.hp-=player.damage;
+bullets.splice(bi,1);
+if(e.hp<=0){
+player.xp+=20;
+if(e.boss)bosses--;
+enemies.splice(ei,1);
+}
+}
+});
+});
+
+if(player.xp>=player.level*100 && player.level<100){
+player.xp=0;
+player.level++;
+player.maxHp+=20;
+player.hp=player.maxHp;
+player.damage+=5;
+player.fireRate=Math.max(100,player.fireRate-20);
+if(player.level%10===0)spawnBoss();
+showUpgrades();
+}
+}
+
+function showUpgrades(){
+let panel=document.getElementById("upgradePanel");
+panel.innerHTML="<b>Choose Upgrade</b>";
+["+20 HP","+5 Damage","Faster Fire"].forEach((u,i)=>{
+let div=document.createElement("div");
+div.className="upg";
+div.innerText=u;
+div.onclick=()=>{
+if(i===0){player.maxHp+=20;player.hp+=20;}
+if(i===1)player.damage+=5;
+if(i===2)player.fireRate=Math.max(80,player.fireRate-30);
+panel.innerHTML="";
+};
+panel.appendChild(div);
+});
+}
+
 function draw(){
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
-/* GROUND */
-ctx.fillStyle="black";
-ctx.fillRect(0,groundY+40,canvas.width,3);
+ctx.strokeStyle="white";
+ctx.strokeRect(arena.x,arena.y,arena.w,arena.h);
 
-/* DINO */
-ctx.fillStyle="black";
-ctx.fillRect(dino.x,dino.y,dino.width,dino.height);
+ctx.font="40px Arial";
+ctx.fillText("😀",player.x-20,player.y+15);
+ctx.font="20px Arial";
+ctx.fillText("🔫",player.x+20,player.y);
 
-/* OBSTACLES */
-obstacles.forEach(o=>{
-ctx.fillRect(o.x,o.y,o.width,o.height);
+bullets.forEach(b=>{
+ctx.fillStyle="yellow";
+ctx.beginPath();
+ctx.arc(b.x,b.y,5,0,Math.PI*2);
+ctx.fill();
 });
+
+enemies.forEach(e=>{
+ctx.fillStyle=e.boss?"purple":"red";
+ctx.beginPath();
+if(e.shape===0)ctx.arc(e.x,e.y,e.size,0,Math.PI*2);
+if(e.shape===1)ctx.rect(e.x-e.size,e.y-e.size,e.size*2,e.size*2);
+if(e.shape===2){
+ctx.moveTo(e.x,e.y-e.size);
+ctx.lineTo(e.x-e.size,e.y+e.size);
+ctx.lineTo(e.x+e.size,e.y+e.size);
+}
+ctx.fill();
+
+ctx.fillStyle="green";
+ctx.fillRect(e.x-e.size,e.y-e.size-10,(e.hp/e.maxHp)*e.size*2,5);
+});
+
+document.getElementById("hud").innerHTML=
+"HP: "+Math.floor(player.hp)+"/"+player.maxHp+
+"<br>Level: "+player.level+
+"<br>XP: "+player.xp+"/"+(player.level*100)+
+"<br>Damage: "+player.damage+
+"<br>FireRate: "+player.fireRate+
+"<br>Ulti CD: "+Math.floor(player.ultiCD/60);
 }
 
-/* LOOP */
 function loop(){
 update();
 draw();
 requestAnimationFrame(loop);
 }
+
 loop();
-
-/* RESTART */
-function restart(){
-obstacles=[];
-score=0;
-speed=6;
-gameOver=false;
-document.getElementById("gameover").style.display="none";
-}
 </script>
-
 </body>
 </html>
