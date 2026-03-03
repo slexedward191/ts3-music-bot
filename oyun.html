@@ -1,300 +1,236 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Hamster Arena</title>
+<title>NEON SIEGE</title>
 <style>
-body{
-margin:0;
-overflow:hidden;
-background:#0f172a;
-font-family:Arial;
-cursor:crosshair;
+body { margin:0; overflow:hidden; background:#0a0a0f; font-family:Arial; }
+canvas { display:block; }
+#ui {
+  position:absolute;
+  top:10px; left:10px;
+  color:white;
+  font-size:14px;
 }
-canvas{display:block}
-.ui{position:fixed;top:20px;right:20px;color:white;text-align:right}
-.bar{width:220px;height:18px;background:#334155;border-radius:8px;overflow:hidden;margin-bottom:6px;position:relative}
-.fill{height:100%}
-.hpText{position:absolute;width:100%;text-align:center;font-size:12px;top:1px}
-.topLeft{position:fixed;top:20px;left:20px}
-.bottomRight{position:fixed;bottom:20px;right:20px;background:#1e293b;padding:15px;border-radius:10px;color:white}
-button{padding:10px 15px;border:none;border-radius:6px;cursor:pointer}
-.rulesBtn{background:#3b82f6;color:white}
-.overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;justify-content:center;align-items:center}
-.panel{background:#1e293b;padding:30px;border-radius:12px;color:white;width:420px;text-align:center}
-.panel button{background:#22c55e;color:white;margin-top:15px}
-.startBtn{font-size:22px;padding:15px 30px}
+#skillMenu {
+  position:absolute;
+  right:20px; top:20px;
+  background:rgba(0,0,0,0.6);
+  padding:10px;
+  border:1px solid cyan;
+}
+button { background:black; color:cyan; border:1px solid cyan; margin:2px; }
 </style>
 </head>
 <body>
-
-<div class="topLeft">
-<button class="rulesBtn" onclick="openRules()">Oyun Kuralları</button>
-</div>
-
-<div class="ui">
-<div class="bar">
-<div id="healthBar" class="fill" style="background:#22c55e;width:100%"></div>
-<div id="hpText" class="hpText">100 HP</div>
-</div>
-<div class="bar"><div id="xpBar" class="fill" style="background:#38bdf8;width:0%"></div></div>
-<div id="info">Kill: 0 | Level: 1</div>
-<div>Ulti: <span id="ultiCD">Hazır</span></div>
-</div>
-
-<div class="bottomRight">
-<h4>Eklentiler</h4>
-<div>Hasar: <span id="damageStat">1</span></div>
-<div>Ateş Hızı: <span id="fireRateStat">250</span> ms</div>
-<div>Oto Ateş: <span id="autoFireStat">Kapalı</span></div>
-</div>
-
-<!-- START -->
-<div class="overlay" id="startOverlay">
-<div class="panel">
-<h1>Hamster Arena</h1>
-<button class="startBtn" onclick="startGame()">Oyunu Başlat</button>
-</div>
-</div>
-
-<!-- RULES -->
-<div class="overlay" id="rulesOverlay" style="display:none;" onclick="closeRules()">
-<div class="panel">
-<h2>Oyun Kuralları</h2>
-<p>W A S D → Hareket</p>
-<p>Sol Tık → Ateş</p>
-<p>SPACE → Otomatik ateş aç/kapat</p>
-<p>Sağ Tık → Hasarın %25’i kadar alan hasarı</p>
-<p>Kurallar açıkken oyun durur.</p>
-<p>Tekrar tıklayınca devam eder.</p>
-<p>HP bitince ölürsün ve restart çıkar.</p>
-</div>
-</div>
-
-<!-- GAME OVER -->
-<div class="overlay" id="gameOverOverlay" style="display:none;">
-<div class="panel">
-<h1>ÖLDÜN 💀</h1>
-<button onclick="restartGame()">Tekrar Başlat</button>
-</div>
-</div>
-
 <canvas id="game"></canvas>
+<div id="ui"></div>
+<div id="skillMenu"></div>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const arena={x:100,y:100,w:canvas.width-200,h:canvas.height-200};
+let keys = {};
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>keys[e.key]=false);
 
-let running=false;
-let paused=false;
-let player,bullets=[],enemies=[];
-let keys={},mouse={x:0,y:0},mouseDown=false;
-let kills=0,level=1,killNeed=10;
-let lastShot=0,lastUlti=0,ultiEffectTime=0;
-let autoFire=false;
+let mouse = {x:0,y:0};
+canvas.addEventListener("mousemove", e=>{
+ mouse.x = e.clientX;
+ mouse.y = e.clientY;
+});
 
-function init(){
-player={
-x:canvas.width/2,
-y:canvas.height/2,
-r:22,
-health:100,
-maxHealth:100,
-speed:4,
-damage:1,
-fireRate:250
+function rand(min,max){ return Math.random()*(max-min)+min; }
+
+let player = {
+ x:canvas.width/2,
+ y:canvas.height/2,
+ radius:15,
+ hp:100,
+ maxHp:100,
+ damage:10,
+ fireRate:400,
+ bulletSpeed:6,
+ speed:3,
+ xp:0,
+ level:1,
+ nextXp:100,
+ skillPoints:0,
+ crit:0.05,
+ xpBoost:1,
+ lastShot:0,
+ shield:false,
+ rapid:false
 };
-kills=0;level=1;killNeed=10;
-bullets=[];enemies=[];
-lastShot=0;lastUlti=0;
-autoFire=false;
-paused=false;
-}
-init();
 
-function startGame(){
-startOverlay.style.display="none";
-running=true;
-}
-
-function restartGame(){
-gameOverOverlay.style.display="none";
-init();
-running=true;
-}
-
-function openRules(){
-if(!running)return;
-paused=true;
-rulesOverlay.style.display="flex";
-}
-
-function closeRules(){
-paused=false;
-rulesOverlay.style.display="none";
-}
-
-document.addEventListener("keydown",e=>{
-let k=e.key.toLowerCase();
-keys[k]=true;
-if(k===" ") autoFire=!autoFire;
-});
-document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
-
-document.addEventListener("mousemove",e=>{
-mouse.x=e.clientX;
-mouse.y=e.clientY;
-});
-
-document.addEventListener("mousedown",e=>{
-if(e.button===0) mouseDown=true;
-if(e.button===2) useUlti();
-});
-document.addEventListener("mouseup",()=>mouseDown=false);
-document.addEventListener("contextmenu",e=>e.preventDefault());
-
-function shoot(){
-let now=Date.now();
-if(now-lastShot<player.fireRate)return;
-lastShot=now;
-let a=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-bullets.push({x:player.x,y:player.y,dx:Math.cos(a)*9,dy:Math.sin(a)*9});
-}
-
-function useUlti(){
-if(paused)return;
-let now=Date.now();
-if(now-lastUlti<10000)return;
-lastUlti=now;
-ultiEffectTime=20;
-let ultiDamage=player.damage*0.25;
-
-enemies.forEach((e,i)=>{
-if(Math.hypot(player.x-e.x,player.y-e.y)<200){
-e.health-=ultiDamage;
-if(e.health<=0){
-enemies.splice(i,1);
-kills++;
-}
-}
-});
-}
+let bullets=[];
+let enemies=[];
+let particles=[];
+let wave=1;
+let gameOver=false;
 
 function spawnEnemy(){
-if(paused)return;
-enemies.push({
-x:arena.x+Math.random()*arena.w,
-y:arena.y+Math.random()*arena.h,
-r:20,
-health:5+level,
-maxHealth:5+level,
-speed:1.5+level*0.05
-});
+ let type = Math.random();
+ let e = {
+   x: rand(0,canvas.width),
+   y: rand(0,canvas.height),
+   radius: rand(10,25),
+   hp: rand(20,50)*wave,
+   speed: rand(1,2)+wave*0.1,
+   type:type
+ };
+ enemies.push(e);
 }
 
-function drawEnemyHP(e){
-let width=40;
-let height=6;
-let hpPercent=e.health/e.maxHealth;
+function shoot(){
+ if(Date.now()-player.lastShot < player.fireRate) return;
+ player.lastShot = Date.now();
+ bullets.push({
+   x:player.x,
+   y:player.y,
+   angle:Math.atan2(mouse.y-player.y, mouse.x-player.x),
+   speed:player.bulletSpeed
+ });
+}
 
-ctx.fillStyle="black";
-ctx.fillRect(e.x-width/2,e.y-e.r-15,width,height);
+function gainXP(amount){
+ player.xp += amount*player.xpBoost;
+ if(player.xp >= player.nextXp){
+   player.xp=0;
+   player.level++;
+   player.skillPoints++;
+   player.nextXp *=1.3;
+ }
+}
 
-ctx.fillStyle="lime";
-ctx.fillRect(e.x-width/2,e.y-e.r-15,width*hpPercent,height);
+function update(){
+ if(gameOver) return;
+
+ // Movement
+ if(keys["w"]) player.y -= player.speed;
+ if(keys["s"]) player.y += player.speed;
+ if(keys["a"]) player.x -= player.speed;
+ if(keys["d"]) player.x += player.speed;
+
+ // Shoot
+ if(keys[" "]) shoot();
+
+ // Bullets
+ bullets.forEach((b,i)=>{
+   b.x += Math.cos(b.angle)*b.speed;
+   b.y += Math.sin(b.angle)*b.speed;
+ });
+
+ // Enemies
+ enemies.forEach((e,i)=>{
+   let angle = Math.atan2(player.y-e.y, player.x-e.x);
+   e.x += Math.cos(angle)*e.speed;
+   e.y += Math.sin(angle)*e.speed;
+
+   // Collision
+   let dx=e.x-player.x;
+   let dy=e.y-player.y;
+   let dist=Math.sqrt(dx*dx+dy*dy);
+   if(dist < e.radius+player.radius){
+     if(!player.shield){
+       player.hp -= 1;
+       if(player.hp<=0) gameOver=true;
+     }
+   }
+ });
+
+ // Bullet hit
+ bullets.forEach((b,bi)=>{
+   enemies.forEach((e,ei)=>{
+     let dx=b.x-e.x;
+     let dy=b.y-e.y;
+     if(Math.sqrt(dx*dx+dy*dy)<e.radius){
+       let dmg=player.damage;
+       if(Math.random()<player.crit) dmg*=2;
+       e.hp-=dmg;
+       bullets.splice(bi,1);
+       if(e.hp<=0){
+         gainXP(20);
+         enemies.splice(ei,1);
+       }
+     }
+   });
+ });
+
+ if(enemies.length < wave*5){
+   spawnEnemy();
+ }
+
+ if(player.level%5==0) wave++;
+}
+
+function draw(){
+ ctx.fillStyle="rgba(10,10,15,0.4)";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
+
+ // Player
+ ctx.beginPath();
+ ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);
+ ctx.fillStyle=player.shield?"cyan":"white";
+ ctx.fill();
+
+ // Bullets
+ ctx.fillStyle="yellow";
+ bullets.forEach(b=>{
+   ctx.beginPath();
+   ctx.arc(b.x,b.y,4,0,Math.PI*2);
+   ctx.fill();
+ });
+
+ // Enemies
+ enemies.forEach(e=>{
+   ctx.beginPath();
+   ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);
+   ctx.fillStyle="red";
+   ctx.fill();
+ });
+
+ document.getElementById("ui").innerHTML=
+   "HP: "+Math.floor(player.hp)+"/"+player.maxHp+
+   "<br>Level: "+player.level+
+   "<br>XP: "+Math.floor(player.xp)+"/"+Math.floor(player.nextXp)+
+   "<br>Wave: "+wave+
+   "<br>Skill Points: "+player.skillPoints;
+}
+
+function skillMenu(){
+ let div=document.getElementById("skillMenu");
+ if(player.skillPoints>0){
+   div.innerHTML=`
+   <button onclick="upgrade('damage')">Damage</button>
+   <button onclick="upgrade('hp')">HP</button>
+   <button onclick="upgrade('fire')">Fire Rate</button>
+   <button onclick="upgrade('speed')">Speed</button>
+   <button onclick="upgrade('crit')">Crit</button>
+   `;
+ } else div.innerHTML="";
+}
+
+function upgrade(stat){
+ if(player.skillPoints<=0) return;
+ player.skillPoints--;
+ if(stat=="damage") player.damage+=5;
+ if(stat=="hp"){ player.maxHp+=20; player.hp+=20; }
+ if(stat=="fire") player.fireRate-=30;
+ if(stat=="speed") player.speed+=0.5;
+ if(stat=="crit") player.crit+=0.02;
 }
 
 function loop(){
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-if(running && !paused){
-
-if(keys["w"])player.y-=player.speed;
-if(keys["s"])player.y+=player.speed;
-if(keys["a"])player.x-=player.speed;
-if(keys["d"])player.x+=player.speed;
-
-player.x=Math.max(arena.x+player.r,Math.min(arena.x+arena.w-player.r,player.x));
-player.y=Math.max(arena.y+player.r,Math.min(arena.y+arena.h-player.r,player.y));
-
-if(mouseDown || autoFire) shoot();
-
-bullets.forEach((b,i)=>{
-b.x+=b.dx;b.y+=b.dy;
-ctx.fillStyle="yellow";
-ctx.beginPath();
-ctx.arc(b.x,b.y,4,0,6.28);
-ctx.fill();
-
-enemies.forEach((e,j)=>{
-if(Math.hypot(b.x-e.x,b.y-e.y)<e.r){
-e.health-=player.damage;
-bullets.splice(i,1);
-if(e.health<=0){
-enemies.splice(j,1);
-kills++;
-}
-}
-});
-});
-
-enemies.forEach(e=>{
-let ang=Math.atan2(player.y-e.y,player.x-e.x);
-e.x+=Math.cos(ang)*e.speed;
-e.y+=Math.sin(ang)*e.speed;
-
-ctx.beginPath();
-ctx.arc(e.x,e.y,e.r,0,6.28);
-ctx.fillStyle="red";
-ctx.fill();
-
-drawEnemyHP(e);
-
-if(Math.hypot(player.x-e.x,player.y-e.y)<player.r+e.r){
-player.health-=0.4;
-}
-});
-
-if(player.health<=0){
-running=false;
-gameOverOverlay.style.display="flex";
+ update();
+ draw();
+ skillMenu();
+ requestAnimationFrame(loop);
 }
 
-healthBar.style.width=(player.health/player.maxHealth*100)+"%";
-hpText.innerText=Math.max(0,Math.floor(player.health))+" HP";
-xpBar.style.width=(kills/killNeed*100)+"%";
-info.innerText="Kill: "+kills+" / "+killNeed+" | Level: "+level;
-
-damageStat.innerText=player.damage;
-fireRateStat.innerText=player.fireRate;
-autoFireStat.innerText=autoFire?"Açık":"Kapalı";
-
-let cd=Math.max(0,10-Math.floor((Date.now()-lastUlti)/1000));
-ultiCD.innerText=cd===0?"Hazır":cd+"s";
-
-if(ultiEffectTime>0){
-ctx.beginPath();
-ctx.arc(player.x,player.y,200-ultiEffectTime*5,0,6.28);
-ctx.strokeStyle="rgba(0,200,255,0.6)";
-ctx.lineWidth=8;
-ctx.stroke();
-ultiEffectTime--;
-}
-}
-
-ctx.font="30px Arial";
-ctx.textAlign="center";
-ctx.textBaseline="middle";
-ctx.fillText("😀",player.x,player.y);
-
-requestAnimationFrame(loop);
-}
-
-setInterval(()=>{if(running && !paused)spawnEnemy();},1500);
 loop();
 </script>
 </body>
