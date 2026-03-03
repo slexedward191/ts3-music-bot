@@ -6,112 +6,44 @@
 <title>GameArea Arena</title>
 
 <style>
-body{
-  margin:0;
-  overflow:hidden;
-  background:#0f172a;
-  font-family:Arial;
-}
-
-canvas{ display:block; }
+body{margin:0;overflow:hidden;background:#0f172a;font-family:Arial;}
+canvas{display:block;}
 
 .back-btn{
-  position:fixed;
-  top:20px;
-  left:20px;
-  background:linear-gradient(135deg,#22c55e,#16a34a);
-  color:white;
-  padding:10px 18px;
-  border-radius:8px;
-  text-decoration:none;
-  font-weight:bold;
-  z-index:1000;
+position:fixed;top:20px;left:20px;
+background:#22c55e;color:white;
+padding:10px 18px;border-radius:8px;
+text-decoration:none;font-weight:bold;
+z-index:1000;
 }
 
-.ui{
-  position:fixed;
-  top:20px;
-  right:20px;
-  color:white;
-  text-align:right;
+.ui{position:fixed;top:20px;right:20px;color:white;text-align:right;}
+
+.health-bar,.xp-bar{
+width:220px;height:16px;background:#334155;
+border-radius:8px;overflow:hidden;margin-bottom:8px;
 }
 
-.health-bar{
-  width:220px;
-  height:16px;
-  background:#334155;
-  border-radius:8px;
-  overflow:hidden;
-  margin-bottom:8px;
-}
-
-.health{
-  height:100%;
-  background:#22c55e;
-}
+.health{height:100%;background:#22c55e;}
+.xp{height:100%;background:#38bdf8;}
 
 .overlay{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.85);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  z-index:2000;
+position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.85);
+display:none;justify-content:center;align-items:center;
+z-index:2000;
 }
 
 .menu-box{
-  background:#1e293b;
-  padding:40px;
-  border-radius:15px;
-  text-align:center;
-  color:white;
-  width:420px;
+background:#1e293b;padding:40px;border-radius:15px;
+text-align:center;color:white;width:420px;
 }
 
 .menu-box button{
-  display:block;
-  width:100%;
-  margin:12px 0;
-  padding:12px;
-  border:none;
-  background:#22c55e;
-  border-radius:8px;
-  color:white;
-  font-size:16px;
-  cursor:pointer;
-}
-
-.upgrade-panel{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  background:#1e293b;
-  padding:15px;
-  border-radius:10px;
-  color:white;
-  width:190px;
-  box-shadow:0 0 15px rgba(0,0,0,0.4);
-}
-
-.upgrade-panel h4{
-  margin:0 0 8px 0;
-  text-align:center;
-}
-
-.upgrade-toggle{
-  position:fixed;
-  bottom:20px;
-  right:220px;
-  padding:8px 12px;
-  border:none;
-  background:#22c55e;
-  color:white;
-  border-radius:6px;
-  cursor:pointer;
+display:block;width:100%;margin:12px 0;
+padding:12px;border:none;background:#22c55e;
+border-radius:8px;color:white;font-size:16px;
+cursor:pointer;
 }
 </style>
 </head>
@@ -120,23 +52,13 @@ canvas{ display:block; }
 <a href="index.html" class="back-btn">← Ana Sayfaya Dön</a>
 
 <div class="ui">
-  <div class="health-bar">
-    <div class="health" id="healthBar"></div>
-  </div>
-  <div id="info">Öldürme: 0 | Level: 1</div>
+<div class="health-bar"><div class="health" id="healthBar"></div></div>
+<div class="xp-bar"><div class="xp" id="xpBar"></div></div>
+<div id="info">Öldürme: 0 | Level: 1</div>
 </div>
-
-<div class="upgrade-panel" id="upgradePanel">
-  <h4>Geliştirmeler</h4>
-  <p>Hız: <span id="uSpeed">0</span></p>
-  <p>Hasar: <span id="uDamage">0</span></p>
-  <p>Ateş Hızı: <span id="uFire">0</span></p>
-</div>
-
-<button class="upgrade-toggle" onclick="toggleUpgradePanel()">▲</button>
 
 <div class="overlay" id="menuOverlay">
-  <div class="menu-box" id="menuBox"></div>
+<div class="menu-box" id="menuBox"></div>
 </div>
 
 <canvas id="game"></canvas>
@@ -144,7 +66,6 @@ canvas{ display:block; }
 <script>
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
-
 canvas.width=window.innerWidth;
 canvas.height=window.innerHeight;
 
@@ -153,22 +74,22 @@ const mapStartX=(canvas.width-mapSize)/2;
 const mapStartY=(canvas.height-mapSize)/2;
 
 let player={
-  x:canvas.width/2,
-  y:canvas.height/2,
-  radius:20,
-  speed:4,
-  health:100,
-  maxHealth:100,
-  damage:1,
-  fireRate:300
+x:canvas.width/2,
+y:canvas.height/2,
+radius:20,
+speed:4,
+health:100,
+maxHealth:100,
+damage:1,
+fireRate:250
 };
-
-let upgrades={ speed:0, damage:0, fire:0 };
 
 let bullets=[];
 let enemies=[];
 let keys={};
 let mouse={x:0,y:0};
+let mouseDown=false;
+
 let kills=0;
 let level=1;
 let exp=0;
@@ -179,208 +100,160 @@ let running=true;
 document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
 document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 document.addEventListener("mousemove",e=>{mouse.x=e.clientX;mouse.y=e.clientY});
-document.addEventListener("mousedown",shoot);
+document.addEventListener("mousedown",()=>mouseDown=true);
+document.addEventListener("mouseup",()=>mouseDown=false);
 
 function shoot(){
-  if(!running) return;
-  let now=Date.now();
-  if(now-lastShot<player.fireRate) return;
-  lastShot=now;
+let now=Date.now();
+if(now-lastShot<player.fireRate) return;
+lastShot=now;
 
-  let angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-  bullets.push({
-    x:player.x,
-    y:player.y,
-    dx:Math.cos(angle)*8,
-    dy:Math.sin(angle)*8
-  });
+let angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+bullets.push({
+x:player.x,
+y:player.y,
+dx:Math.cos(angle)*8,
+dy:Math.sin(angle)*8
+});
 }
 
-function spawnEnemy(boss=false){
-  let x=Math.random()<0.5?mapStartX:mapStartX+mapSize;
-  let y=Math.random()*mapSize+mapStartY;
-  enemies.push({
-    x,y,
-    radius: boss?50:20,
-    health: boss?25:3,
-    speed: boss?1.2:2,
-    boss:boss
-  });
+function spawnEnemy(){
+let spawnRateBoost=1;
+if(level>=10) spawnRateBoost=1.8;
+else if(level>=5) spawnRateBoost=1.4;
+
+let x=Math.random()<0.5?mapStartX:mapStartX+mapSize;
+let y=Math.random()*mapSize+mapStartY;
+
+enemies.push({
+x,y,
+radius:20,
+health:2 + level*0.3,
+speed:1.8 + level*0.05
+});
 }
 
-function drawGrid(){
-  ctx.strokeStyle="#1e293b";
-  for(let i=mapStartX;i<=mapStartX+mapSize;i+=40){
-    ctx.beginPath();
-    ctx.moveTo(i,mapStartY);
-    ctx.lineTo(i,mapStartY+mapSize);
-    ctx.stroke();
-  }
-  for(let i=mapStartY;i<=mapStartY+mapSize;i+=40){
-    ctx.beginPath();
-    ctx.moveTo(mapStartX,i);
-    ctx.lineTo(mapStartX+mapSize,i);
-    ctx.stroke();
-  }
-
-  ctx.strokeStyle="white";
-  ctx.lineWidth=3;
-  ctx.strokeRect(mapStartX,mapStartY,mapSize,mapSize);
-  ctx.lineWidth=1;
+function drawMap(){
+ctx.strokeStyle="white";
+ctx.lineWidth=3;
+ctx.strokeRect(mapStartX,mapStartY,mapSize,mapSize);
+ctx.lineWidth=1;
 }
 
 function update(){
-  if(!running) return;
+if(!running) return;
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawGrid();
+ctx.clearRect(0,0,canvas.width,canvas.height);
+drawMap();
 
-  if(keys["w"]) player.y-=player.speed;
-  if(keys["s"]) player.y+=player.speed;
-  if(keys["a"]) player.x-=player.speed;
-  if(keys["d"]) player.x+=player.speed;
+if(keys["w"]) player.y-=player.speed;
+if(keys["s"]) player.y+=player.speed;
+if(keys["a"]) player.x-=player.speed;
+if(keys["d"]) player.x+=player.speed;
 
-  if(keys["shift"]){
-    player.x+=Math.cos(Math.atan2(mouse.y-player.y,mouse.x-player.x))*5;
-    player.y+=Math.sin(Math.atan2(mouse.y-player.y,mouse.x-player.x))*5;
-  }
+if(mouseDown) shoot();
 
-  if(player.x<mapStartX || player.x>mapStartX+mapSize ||
-     player.y<mapStartY || player.y>mapStartY+mapSize){
-     endGame();
-  }
-
-  ctx.beginPath();
-  ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);
-  ctx.fillStyle="#22c55e";
-  ctx.fill();
-
-  let angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-  ctx.beginPath();
-  ctx.moveTo(player.x,player.y);
-  ctx.lineTo(player.x+Math.cos(angle)*40,player.y+Math.sin(angle)*40);
-  ctx.strokeStyle="white";
-  ctx.lineWidth=5;
-  ctx.stroke();
-
-  bullets.forEach((b,i)=>{
-    b.x+=b.dx;
-    b.y+=b.dy;
-
-    ctx.beginPath();
-    ctx.arc(b.x,b.y,5,0,Math.PI*2);
-    ctx.fillStyle="#38bdf8";
-    ctx.fill();
-
-    enemies.forEach((e,j)=>{
-      if(Math.hypot(b.x-e.x,b.y-e.y)<e.radius){
-        e.health-=player.damage;
-        bullets.splice(i,1);
-        if(e.health<=0){
-          enemies.splice(j,1);
-          kills++;
-          exp++;
-        }
-      }
-    });
-  });
-
-  enemies.forEach(e=>{
-    let a=Math.atan2(player.y-e.y,player.x-e.x);
-    e.x+=Math.cos(a)*e.speed;
-    e.y+=Math.sin(a)*e.speed;
-
-    ctx.beginPath();
-    ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);
-    ctx.fillStyle=e.boss?"purple":"#ef4444";
-    ctx.fill();
-
-    if(Math.hypot(player.x-e.x,player.y-e.y)<player.radius+e.radius){
-      player.health-=0.4;
-    }
-  });
-
-  if(exp>=expNeed){
-    level++;
-    exp=0;
-    expNeed+=5;
-    openUpgradeMenu();
-  }
-
-  document.getElementById("healthBar").style.width=
-    (player.health/player.maxHealth*100)+"%";
-
-  document.getElementById("info").innerText=
-    "Öldürme: "+kills+" | Level: "+level;
-
-  if(player.health<=0) endGame();
-
-  requestAnimationFrame(update);
+if(player.x<mapStartX||player.x>mapStartX+mapSize||
+player.y<mapStartY||player.y>mapStartY+mapSize){
+endGame();
 }
 
-function openUpgradeMenu(){
-  running=false;
-  const box=document.getElementById("menuBox");
-  box.innerHTML="<h2>LEVEL "+level+"</h2>"+
-  "<button onclick='chooseUpgrade(\"speed\")'>Hız +</button>"+
-  "<button onclick='chooseUpgrade(\"damage\")'>Hasar +</button>"+
-  "<button onclick='chooseUpgrade(\"fire\")'>Ateş Hızı +</button>";
-  document.getElementById("menuOverlay").style.display="flex";
+ctx.beginPath();
+ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);
+ctx.fillStyle="#22c55e";
+ctx.fill();
+
+bullets.forEach((b,i)=>{
+b.x+=b.dx;
+b.y+=b.dy;
+ctx.beginPath();
+ctx.arc(b.x,b.y,5,0,Math.PI*2);
+ctx.fillStyle="#38bdf8";
+ctx.fill();
+
+enemies.forEach((e,j)=>{
+if(Math.hypot(b.x-e.x,b.y-e.y)<e.radius){
+e.health-=player.damage;
+bullets.splice(i,1);
+if(e.health<=0){
+enemies.splice(j,1);
+kills++;
+exp++;
+}
+}
+});
+});
+
+enemies.forEach(e=>{
+let a=Math.atan2(player.y-e.y,player.x-e.x);
+e.x+=Math.cos(a)*e.speed;
+e.y+=Math.sin(a)*e.speed;
+
+ctx.beginPath();
+ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);
+ctx.fillStyle="#ef4444";
+ctx.fill();
+
+if(Math.hypot(player.x-e.x,player.y-e.y)<player.radius+e.radius){
+player.health-=0.3;
+}
+});
+
+if(exp>=expNeed){
+level++;
+exp=0;
+expNeed+=6;
 }
 
-function chooseUpgrade(type){
-  if(type==="speed"){ player.speed+=1; upgrades.speed++; }
-  if(type==="damage"){ player.damage++; upgrades.damage++; }
-  if(type==="fire"){ player.fireRate=Math.max(100,player.fireRate-40); upgrades.fire++; }
+document.getElementById("healthBar").style.width=
+(player.health/player.maxHealth*100)+"%";
 
-  updateUpgradeUI();
-  document.getElementById("menuOverlay").style.display="none";
-  running=true;
-  update();
-}
+document.getElementById("xpBar").style.width=
+(exp/expNeed*100)+"%";
 
-function updateUpgradeUI(){
-  document.getElementById("uSpeed").innerText=upgrades.speed;
-  document.getElementById("uDamage").innerText=upgrades.damage;
-  document.getElementById("uFire").innerText=upgrades.fire;
-}
+document.getElementById("info").innerText=
+"Öldürme: "+kills+" | Level: "+level;
 
-function toggleUpgradePanel(){
-  const p=document.getElementById("upgradePanel");
-  p.style.display=p.style.display==="none"?"block":"none";
+if(player.health<=0) endGame();
+
+requestAnimationFrame(update);
 }
 
 function endGame(){
-  running=false;
-  const box=document.getElementById("menuBox");
-  box.innerHTML="<h2>Oyun Bitti</h2>"+
-  "<p>Toplam Öldürme: "+kills+"</p>"+
-  "<button onclick='resetGame()'>Tekrar Oyna</button>";
-  document.getElementById("menuOverlay").style.display="flex";
+running=false;
+const box=document.getElementById("menuBox");
+box.innerHTML="<h2>Oyun Bitti</h2>"+
+"<p>Toplam Öldürme: "+kills+"</p>"+
+"<button onclick='resetGame()'>Tekrar Oyna</button>";
+document.getElementById("menuOverlay").style.display="flex";
 }
 
 function resetGame(){
-  player.health=100;
-  player.x=canvas.width/2;
-  player.y=canvas.height/2;
-  bullets=[];
-  enemies=[];
-  kills=0;
-  level=1;
-  exp=0;
-  expNeed=8;
-  upgrades={ speed:0, damage:0, fire:0 };
-  updateUpgradeUI();
-  document.getElementById("menuOverlay").style.display="none";
-  running=true;
-  update();
+player.health=100;
+player.x=canvas.width/2;
+player.y=canvas.height/2;
+bullets=[];
+enemies=[];
+kills=0;
+level=1;
+exp=0;
+expNeed=8;
+document.getElementById("menuOverlay").style.display="none";
+running=true;
+update();
 }
 
-setInterval(()=>{ if(running) spawnEnemy(); },1500);
-setInterval(()=>{ if(running) spawnEnemy(true); },20000);
+setInterval(()=>{
+if(running){
+let spawnCount=1;
+if(level>=10) spawnCount=3;
+else if(level>=5) spawnCount=2;
+
+for(let i=0;i<spawnCount;i++) spawnEnemy();
+}
+},1500);
 
 update();
 </script>
-
 </body>
 </html>
