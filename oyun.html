@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Emoji Arena X</title>
+<title>Emoji Arena Hardcore</title>
 <style>
 body{margin:0;overflow:hidden;background:#0f172a;font-family:Arial;color:white}
 canvas{display:block}
@@ -24,7 +24,6 @@ border-radius:8px;
 cursor:pointer;
 }
 .upg:hover{background:#374151}
-
 #menu{
 position:fixed;
 inset:0;
@@ -35,7 +34,6 @@ justify-content:center;
 flex-direction:column;
 z-index:10;
 }
-
 button{
 padding:15px 40px;
 font-size:20px;
@@ -50,13 +48,13 @@ button:hover{background:#16a34a}
 </head>
 <body>
 
-<!-- ✅ GERÇEK VIRGIN RADIO UK STREAM -->
-<audio id="radio" preload="none">
-  <source src="https://radio-streaming.virginradio.co.uk/virginradio" type="audio/mpeg">
+<!-- ✅ KRAL FM TÜRKÇE POP -->
+<audio id="radio">
+<source src="https://dygedge.radyotvonline.net/kralfm/playlist.m3u8" type="application/x-mpegURL">
 </audio>
 
 <div id="menu">
-<h1>🔥 Emoji Arena X</h1>
+<h1>🔥 Emoji Arena Hardcore</h1>
 <button id="startBtn">Başlat</button>
 </div>
 
@@ -67,49 +65,33 @@ button:hover{background:#16a34a}
 <script>
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+canvas.width=innerWidth;
+canvas.height=innerHeight;
 
-window.addEventListener("resize",()=>{
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
-});
+window.onresize=()=>{canvas.width=innerWidth;canvas.height=innerHeight;}
 
 let gameStarted=false;
 let particles=[];
+let bullets=[];
+let enemies=[];
+let bosses=0;
 
-document.getElementById("startBtn").onclick=function(){
+document.getElementById("startBtn").onclick=()=>{
 document.getElementById("menu").style.display="none";
-
-const radio=document.getElementById("radio");
+let radio=document.getElementById("radio");
 radio.volume=0.4;
-radio.play().catch(e=>console.log("Radyo başlatılamadı:",e));
-
+radio.play().catch(()=>{});
 gameStarted=true;
 };
 
 const arena={x:100,y:100,w:canvas.width-200,h:canvas.height-200};
-
-let keys={},mouse={x:0,y:0,down:false,right:false};
-document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
-canvas.addEventListener("mousemove",e=>{mouse.x=e.clientX;mouse.y=e.clientY});
-canvas.addEventListener("mousedown",e=>{
-if(e.button===0)mouse.down=true;
-if(e.button===2){e.preventDefault();mouse.right=true;}
-});
-canvas.addEventListener("mouseup",e=>{
-if(e.button===0)mouse.down=false;
-if(e.button===2)mouse.right=false;
-});
-canvas.addEventListener("contextmenu",e=>e.preventDefault());
 
 function rand(a,b){return Math.random()*(b-a)+a;}
 
 let player={
 x:canvas.width/2,
 y:canvas.height/2,
-size:30,
+size:25,
 speed:4,
 hp:100,
 maxHp:100,
@@ -118,41 +100,43 @@ fireRate:400,
 lastShot:0,
 xp:0,
 level:1,
-ultiCD:0,
-dashCD:0,
 score:0
 };
 
-let enemies=[];
-let bullets=[];
-let bosses=0;
+let keys={},mouse={x:0,y:0,down:false};
+document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+canvas.onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};
+canvas.onmousedown=()=>mouse.down=true;
+canvas.onmouseup=()=>mouse.down=false;
 
 function spawnEnemy(){
-if(enemies.length>80)return;
-let scale=1+player.level*0.2;
+if(enemies.length>60)return;
+let scale=1+player.level*0.3;
 enemies.push({
 x:rand(arena.x,arena.x+arena.w),
 y:rand(arena.y,arena.y+arena.h),
-size:rand(20,40),
-hp:80*scale,
-maxHp:80*scale,
-speed:1.5+player.level*0.07,
+size:rand(20,35),
+hp:100*scale,
+maxHp:100*scale,
+speed:1.5+player.level*0.1,
 boss:false
 });
 }
-setInterval(()=>{if(gameStarted)spawnEnemy()},600);
+setInterval(()=>{if(gameStarted)spawnEnemy()},700);
 
 function spawnBoss(){
 bosses++;
-let scale=player.level*2;
+let scale=player.level*4;
 enemies.push({
 x:rand(arena.x,arena.x+arena.w),
 y:rand(arena.y,arena.y+arena.h),
-size:90,
-hp:600*scale,
-maxHp:600*scale,
-speed:1.2,
-boss:true
+size:130,
+hp:2000*scale,
+maxHp:2000*scale,
+speed:2,
+boss:true,
+rage:false
 });
 }
 
@@ -160,58 +144,53 @@ function shoot(){
 let now=Date.now();
 if(now-player.lastShot<player.fireRate)return;
 player.lastShot=now;
+
 let angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+
+if(player.level<5){
 bullets.push({
 x:player.x,
 y:player.y,
 dx:Math.cos(angle)*10,
-dy:Math.sin(angle)*10
+dy:Math.sin(angle)*10,
+bounce:4,
+enemy:false
+});
+}else{
+for(let i=-1;i<=1;i++){
+let spread=angle+i*0.25;
+bullets.push({
+x:player.x,
+y:player.y,
+dx:Math.cos(spread)*10,
+dy:Math.sin(spread)*10,
+bounce:4,
+enemy:false
 });
 }
-
-function ulti(){
-if(player.ultiCD>0)return;
-player.ultiCD=300;
-enemies.forEach(e=>e.hp*=0.5);
-}
-
-function createExplosion(x,y){
-for(let i=0;i<15;i++){
-particles.push({
-x,y,
-dx:rand(-3,3),
-dy:rand(-3,3),
-life:30
-});
 }
 }
 
 function update(){
+
 if(keys["w"])player.y-=player.speed;
 if(keys["s"])player.y+=player.speed;
 if(keys["a"])player.x-=player.speed;
 if(keys["d"])player.x+=player.speed;
 
-if(keys["shift"] && player.dashCD<=0){
-player.x+=(mouse.x-player.x)*0.4;
-player.y+=(mouse.y-player.y)*0.4;
-player.dashCD=100;
-}
-
 player.x=Math.max(arena.x,Math.min(arena.x+arena.w,player.x));
 player.y=Math.max(arena.y,Math.min(arena.y+arena.h,player.y));
 
 if(mouse.down)shoot();
-if(mouse.right)ulti();
-
-if(player.ultiCD>0)player.ultiCD--;
-if(player.dashCD>0)player.dashCD--;
 
 bullets.forEach((b,i)=>{
 b.x+=b.dx;
 b.y+=b.dy;
-if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height)
-bullets.splice(i,1);
+
+// DUVAR SEKMESİ
+if(b.x<=arena.x||b.x>=arena.x+arena.w){b.dx*=-1;b.bounce--;}
+if(b.y<=arena.y||b.y>=arena.y+arena.h){b.dy*=-1;b.bounce--;}
+if(b.bounce<=0)bullets.splice(i,1);
 });
 
 enemies.forEach((e,ei)=>{
@@ -219,62 +198,64 @@ let angle=Math.atan2(player.y-e.y,player.x-e.x);
 e.x+=Math.cos(angle)*e.speed;
 e.y+=Math.sin(angle)*e.speed;
 
+if(e.boss && e.hp<e.maxHp/2 && !e.rage){
+e.speed*=2;
+e.rage=true;
+}
+
 let dx=e.x-player.x,dy=e.y-player.y;
 if(Math.sqrt(dx*dx+dy*dy)<e.size+player.size){
-player.hp-=0.6;
+player.hp-=0.8;
 if(player.hp<=0)gameOver();
 }
 
 bullets.forEach((b,bi)=>{
+if(b.enemy)return;
 let dx=e.x-b.x,dy=e.y-b.y;
 if(Math.sqrt(dx*dx+dy*dy)<e.size){
 e.hp-=player.damage;
 bullets.splice(bi,1);
 if(e.hp<=0){
-createExplosion(e.x,e.y);
-player.xp+=25;
-player.score+=10;
+player.score+=20;
+player.xp+=30;
 if(e.boss)bosses--;
 enemies.splice(ei,1);
 }
 }
 });
+
+if(e.boss && Math.random()<0.015){
+let a=Math.atan2(player.y-e.y,player.x-e.x);
+bullets.push({
+x:e.x,
+y:e.y,
+dx:Math.cos(a)*6,
+dy:Math.sin(a)*6,
+bounce:2,
+enemy:true
+});
+}
 });
 
-particles.forEach((p,i)=>{
-p.x+=p.dx;
-p.y+=p.dy;
-p.life--;
-if(p.life<=0)particles.splice(i,1);
+bullets.forEach((b,i)=>{
+if(b.enemy){
+let dx=player.x-b.x,dy=player.y-b.y;
+if(Math.sqrt(dx*dx+dy*dy)<player.size){
+player.hp-=5;
+bullets.splice(i,1);
+}
+}
 });
 
-if(player.xp>=player.level*120){
+if(player.xp>=player.level*150){
 player.xp=0;
 player.level++;
-player.maxHp+=25;
+player.maxHp+=30;
 player.hp=player.maxHp;
-player.damage+=7;
-player.fireRate=Math.max(80,player.fireRate-25);
-if(player.level%8===0)spawnBoss();
-showUpgrades();
+player.damage+=10;
+player.fireRate=Math.max(80,player.fireRate-30);
+if(player.level%7===0)spawnBoss();
 }
-}
-
-function showUpgrades(){
-let panel=document.getElementById("upgradePanel");
-panel.innerHTML="<b>Upgrade Seç</b>";
-["+30 HP","+10 Damage","Ultra Fire"].forEach((u,i)=>{
-let div=document.createElement("div");
-div.className="upg";
-div.innerText=u;
-div.onclick=()=>{
-if(i===0){player.maxHp+=30;player.hp+=30;}
-if(i===1)player.damage+=10;
-if(i===2)player.fireRate=Math.max(60,player.fireRate-40);
-panel.innerHTML="";
-};
-panel.appendChild(div);
-});
 }
 
 function draw(){
@@ -282,11 +263,11 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
 ctx.strokeStyle="white";
 ctx.strokeRect(arena.x,arena.y,arena.w,arena.h);
 
-ctx.font="40px Arial";
-ctx.fillText("😀",player.x-20,player.y+15);
+ctx.font="30px Arial";
+ctx.fillText("😀",player.x-15,player.y+10);
 
 bullets.forEach(b=>{
-ctx.fillStyle="yellow";
+ctx.fillStyle=b.enemy?"purple":"yellow";
 ctx.beginPath();
 ctx.arc(b.x,b.y,5,0,Math.PI*2);
 ctx.fill();
@@ -298,31 +279,19 @@ ctx.beginPath();
 ctx.arc(e.x,e.y,e.size,0,Math.PI*2);
 ctx.fill();
 ctx.fillStyle="green";
-ctx.fillRect(e.x-e.size,e.y-e.size-10,(e.hp/e.maxHp)*e.size*2,5);
-});
-
-particles.forEach(p=>{
-ctx.fillStyle="orange";
-ctx.fillRect(p.x,p.y,3,3);
+ctx.fillRect(e.x-e.size,e.y-e.size-10,(e.hp/e.maxHp)*e.size*2,6);
 });
 
 document.getElementById("hud").innerHTML=
 "HP: "+Math.floor(player.hp)+"/"+player.maxHp+
 "<br>Level: "+player.level+
-"<br>XP: "+player.xp+"/"+(player.level*120)+
+"<br>XP: "+player.xp+"/"+(player.level*150)+
 "<br>Damage: "+player.damage+
-"<br>Score: "+player.score+
-"<br>HighScore: "+(localStorage.getItem("highscore")||0);
+"<br>Score: "+player.score;
 }
 
 function gameOver(){
 gameStarted=false;
-
-let high=localStorage.getItem("highscore")||0;
-if(player.score>high){
-localStorage.setItem("highscore",player.score);
-}
-
 document.body.innerHTML+=`
 <div style="
 position:fixed;
