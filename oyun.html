@@ -2,221 +2,206 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Monster Ascent</title>
+<title>Monster Devour IO</title>
 <style>
-body{margin:0;overflow:hidden;background:#10151f;font-family:Arial}
-canvas{display:block}
-#ui{
-position:absolute;top:10px;right:10px;
-color:white;font-size:14px;text-align:right
+body{
+margin:0;
+overflow:hidden;
+background:#0b0f1a;
+font-family:Arial;
+color:white;
 }
-#controls{
-position:absolute;top:10px;left:10px;
+canvas{
+display:block;
+background:#0f1628;
+}
+#info{
+position:fixed;
+left:10px;
+top:10px;
 background:rgba(0,0,0,0.6);
-color:white;font-size:12px;
-padding:8px;border:1px solid #444
+padding:10px;
+font-size:12px;
+border:1px solid #555;
 }
-#controls table{border-collapse:collapse}
-#controls td{padding:2px 6px}
-#overlay{
-position:absolute;inset:0;
-display:flex;align-items:center;justify-content:center;
-flex-direction:column;
-background:rgba(0,0,0,0.7);
-color:white;visibility:hidden
-}
-button{
-padding:10px 20px;margin-top:10px;
-background:#222;color:#0f0;border:1px solid #0f0;
-cursor:pointer
+#hud{
+position:fixed;
+right:15px;
+top:10px;
+text-align:right;
+font-size:14px;
 }
 </style>
 </head>
 <body>
 
-<canvas id="game"></canvas>
-
-<div id="controls">
-<b>HOW TO PLAY</b>
-<table>
-<tr><td>Mouse</td><td>Move</td></tr>
-<tr><td>WASD</td><td>Move</td></tr>
-<tr><td>Goal</td><td>Eat smaller</td></tr>
-<tr><td>Danger</td><td>Avoid bigger</td></tr>
-<tr><td>Boss</td><td>Every 5 Lv</td></tr>
-</table>
+<div id="info">
+<b>HOW TO PLAY</b><br><br>
+WASD / Mouse: Move<br>
+Eat smaller monsters<br>
+Avoid bigger monsters<br>
+Boss every 5 levels<br>
+Grow infinitely
 </div>
 
-<div id="ui"></div>
-<div id="overlay"></div>
+<div id="hud"></div>
+
+<canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let keys = {};
-window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+window.addEventListener("resize",()=>{
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+});
 
-let mouse = {x:canvas.width/2,y:canvas.height/2};
-canvas.addEventListener("mousemove", e=>{
+let camera = {x:0,y:0};
+
+let keys = {};
+document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+let mouse = {x:0,y:0};
+canvas.addEventListener("mousemove",e=>{
 mouse.x = e.clientX;
 mouse.y = e.clientY;
 });
 
-function rand(a,b){ return Math.random()*(b-a)+a; }
-function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function rand(min,max){ return Math.random()*(max-min)+min; }
 
-let player = {
-x:0,y:0,
-mass:60,
-hp:100,
-maxHp:100,
-level:1,
-xp:0,
-nextXp:100
-};
-
-let entities=[];
-let spawnTimer=0;
-let bossActive=false;
-let gameOver=false;
-
-function radius(m){ return Math.sqrt(m)*3; }
-
-function spawnEntity(){
-entities.push({
-x:rand(-3000,3000),
-y:rand(-3000,3000),
-mass:rand(20,200+player.level*15),
-type:"normal"
-});
+class Monster{
+constructor(x,y,size,color){
+this.x=x;
+this.y=y;
+this.size=size;
+this.color=color;
+this.speed=2/(size*0.05);
 }
+draw(){
+ctx.beginPath();
+ctx.fillStyle=this.color;
+ctx.arc(this.x-camera.x,this.y-camera.y,this.size,0,Math.PI*2);
+ctx.fill();
+}
+moveRandom(){
+this.x += rand(-this.speed,this.speed);
+this.y += rand(-this.speed,this.speed);
+}
+}
+
+let player = new Monster(0,0,25,"lime");
+player.level=1;
+player.xp=0;
+player.hp=100;
+player.maxHp=100;
+player.mass=50;
+
+let monsters=[];
+function spawnMonster(){
+let size = rand(10,80);
+let x = rand(-3000,3000);
+let y = rand(-3000,3000);
+let color = size > player.size ? "red" : "orange";
+monsters.push(new Monster(x,y,size,color));
+}
+
+for(let i=0;i<150;i++) spawnMonster();
 
 function spawnBoss(){
-bossActive=true;
-entities.push({
-x:rand(-1000,1000),
-y:rand(-1000,1000),
-mass:1000+player.level*200,
-type:"boss"
-});
+let size = player.size*1.8;
+monsters.push(new Monster(player.x+rand(-500,500),player.y+rand(-500,500),size,"purple"));
 }
 
-function gainXP(v){
-player.xp += v;
-if(player.xp >= player.nextXp){
+function updatePlayer(){
+let speed = 4/(player.size*0.05);
+
+if(keys["w"]) player.y -= speed;
+if(keys["s"]) player.y += speed;
+if(keys["a"]) player.x -= speed;
+if(keys["d"]) player.x += speed;
+
+camera.x = player.x - canvas.width/2;
+camera.y = player.y - canvas.height/2;
+}
+
+function collision(){
+for(let i=monsters.length-1;i>=0;i--){
+let m = monsters[i];
+let dx = player.x - m.x;
+let dy = player.y - m.y;
+let dist = Math.sqrt(dx*dx+dy*dy);
+
+if(dist < player.size + m.size){
+if(player.size > m.size){
+player.xp += Math.floor(m.size);
+player.mass += m.size;
+player.size += m.size*0.05;
+monsters.splice(i,1);
+spawnMonster();
+}else{
+alert("You were eaten! Level reached: "+player.level);
+location.reload();
+}
+}
+}
+}
+
+function levelSystem(){
+if(player.xp >= player.level*100){
 player.xp = 0;
 player.level++;
-player.nextXp *= 1.4;
-player.mass += 40;
-if(player.level % 5 === 0) spawnBoss();
+player.size += 5;
+player.maxHp += 20;
+player.hp = player.maxHp;
+if(player.level % 5 === 0){
+spawnBoss();
 }
-}
-
-function update(dt){
-if(gameOver) return;
-
-let angle = Math.atan2(mouse.y-canvas.height/2, mouse.x-canvas.width/2);
-let speed = 250/(Math.sqrt(player.mass)*0.25);
-
-player.x += Math.cos(angle)*speed*dt;
-player.y += Math.sin(angle)*speed*dt;
-
-if(keys["w"]) player.y -= speed*dt;
-if(keys["s"]) player.y += speed*dt;
-if(keys["a"]) player.x -= speed*dt;
-if(keys["d"]) player.x += speed*dt;
-
-for(let i=entities.length-1;i>=0;i--){
-let e = entities[i];
-let dx = player.x - e.x;
-let dy = player.y - e.y;
-let dist = Math.hypot(dx,dy);
-
-if(e.mass < player.mass*0.9){
-if(dist < radius(player.mass)){
-player.mass += e.mass*0.5;
-gainXP(e.mass*0.3);
-entities.splice(i,1);
-}
-}
-else if(e.mass > player.mass*1.1){
-let a = Math.atan2(player.y-e.y, player.x-e.x);
-e.x += Math.cos(a)*60*dt;
-e.y += Math.sin(a)*60*dt;
-
-if(dist < radius(e.mass)){
-player.hp -= 50*dt;
-}
-}
-else{
-if(dist < radius(player.mass)){
-player.hp -= 20*dt;
 }
 }
 
-if(player.hp <= 0){
-endGame();
-}
-}
+function drawMiniMap(){
+let mapSize=150;
+ctx.fillStyle="rgba(0,0,0,0.5)";
+ctx.fillRect(canvas.width-mapSize-20,canvas.height-mapSize-20,mapSize,mapSize);
 
-spawnTimer -= dt;
-if(spawnTimer <= 0){
-spawnEntity();
-spawnTimer = 0.7;
-}
-
-player.hp = clamp(player.hp,0,player.maxHp);
+ctx.fillStyle="lime";
+let px = (player.x+3000)/6000*mapSize;
+let py = (player.y+3000)/6000*mapSize;
+ctx.fillRect(canvas.width-mapSize-20+px,canvas.height-mapSize-20+py,4,4);
 }
 
 function draw(){
-ctx.fillStyle="#10151f";
-ctx.fillRect(0,0,canvas.width,canvas.height);
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
-ctx.save();
-ctx.translate(canvas.width/2-player.x, canvas.height/2-player.y);
-
-for(let e of entities){
-ctx.beginPath();
-ctx.arc(e.x,e.y,radius(e.mass),0,Math.PI*2);
-ctx.fillStyle = e.type==="boss" ? "purple" : "red";
-ctx.fill();
+for(let m of monsters){
+m.moveRandom();
+m.draw();
 }
 
-ctx.beginPath();
-ctx.arc(player.x,player.y,radius(player.mass),0,Math.PI*2);
-ctx.fillStyle="lime";
-ctx.fill();
+player.draw();
+drawMiniMap();
 
-ctx.restore();
-
-document.getElementById("ui").innerHTML =
-"Mass: "+Math.floor(player.mass)+
-"<br>HP: "+Math.floor(player.hp)+"/"+player.maxHp+
-"<br>Level: "+player.level+
-"<br>XP: "+Math.floor(player.xp)+"/"+Math.floor(player.nextXp);
+document.getElementById("hud").innerHTML=
+"Mass: "+Math.floor(player.mass)+"<br>"+
+"HP: "+player.hp+"/"+player.maxHp+"<br>"+
+"Level: "+player.level+"<br>"+
+"XP: "+player.xp+"/"+(player.level*100);
 }
 
-function endGame(){
-gameOver = true;
-let overlay = document.getElementById("overlay");
-overlay.style.visibility="visible";
-overlay.innerHTML="<h1>You Were Eaten</h1><button onclick='location.reload()'>Restart</button>";
-}
-
-let last=0;
-function loop(t){
-let dt = (t-last)/1000;
-last = t;
-update(dt);
+function gameLoop(){
+updatePlayer();
+collision();
+levelSystem();
 draw();
-requestAnimationFrame(loop);
+requestAnimationFrame(gameLoop);
 }
-loop();
+
+gameLoop();
 </script>
+
 </body>
 </html>
