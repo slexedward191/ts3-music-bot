@@ -2,235 +2,34 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Diep.io Ultra - 10vs10 Team War</title>
+    <title>Diep.io MOBA: Tower Control</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #b9bbbe; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #b9bbbe; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; background-color: #cdcdcd; }
         #ui {
             position: absolute; bottom: 20px; left: 20px;
-            background: rgba(0, 0, 0, 0.6); padding: 15px;
-            border-radius: 8px; color: white; pointer-events: none;
-            border: 2px solid #444; min-width: 150px;
+            background: rgba(0, 0, 0, 0.7); padding: 15px;
+            border-radius: 10px; color: white; pointer-events: none;
+            border: 2px solid #444; min-width: 200px;
         }
-        #minimap {
-            position: absolute; bottom: 20px; right: 20px;
-            width: 160px; height: 160px; background: rgba(0, 0, 0, 0.4);
-            border: 2px solid #fff; border-radius: 4px;
+        #announcement {
+            position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
+            text-align: center; color: white; text-shadow: 2px 2px #000; pointer-events: none;
         }
+        .buff-active { color: #ffeb3b; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div id="scoreDisplay">Puan: 0</div>
-        <div id="levelDisplay">Seviye: 1</div>
-        <div id="classDisplay" style="color: #00b2e1;">Sınıf: Basic</div>
-        <div style="font-size: 10px; margin-top: 8px; color: #ccc;">WASD: Hareket | Sol Tık: Ateş</div>
+    <div id="announcement">
+        <h1 id="msg">MERKEZİ KULEYİ ELE GEÇİR!</h1>
+        <p id="sub-msg">Kule Kontrolü: Tarafsız</p>
     </div>
 
-    <canvas id="minimap"></canvas>
-    <canvas id="gameCanvas"></canvas>
-
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const mCanvas = document.getElementById("minimap");
-        const mCtx = mCanvas.getContext("2d");
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        mCanvas.width = 160;
-        mCanvas.height = 160;
-
-        const WORLD_SIZE = 4000;
-        let bullets = [];
-        let shapes = [];
-        let tanks = [];
-        let player;
-
-        const keys = {};
-        const mouse = { x: 0, y: 0, down: false };
-
-        window.addEventListener("keydown", e => keys[e.code] = true);
-        window.addEventListener("keyup", e => keys[e.code] = false);
-        window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
-        window.onmousedown = () => mouse.down = true;
-        window.onmouseup = () => mouse.down = false;
-
-        class Bullet {
-            constructor(x, y, angle, team, color) {
-                this.x = x; this.y = y; this.angle = angle;
-                this.team = team; this.color = color;
-                this.speed = 14; this.radius = 8; this.life = 70;
-            }
-            update() {
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
-                this.life--;
-            }
-            draw(cx, cy) {
-                ctx.beginPath();
-                ctx.arc(this.x - cx, this.y - cy, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.strokeStyle = "#333"; ctx.lineWidth = 2; ctx.stroke();
-            }
-        }
-
-        class Tank {
-            constructor(team, isPlayer = false) {
-                this.team = team;
-                this.isPlayer = isPlayer;
-                this.color = (team === "Mavi") ? "#00b2e1" : "#f14e54";
-                this.radius = 25;
-                this.score = 0;
-                this.hp = 100;
-                this.maxHp = 100;
-                this.lastShot = 0;
-                this.fireRate = 400;
-                this.type = "Basic";
-                this.spawn();
-            }
-            spawn() {
-                this.x = (this.team === "Mavi") ? Math.random() * 600 : WORLD_SIZE - Math.random() * 600;
-                this.y = Math.random() * WORLD_SIZE;
-                this.hp = 100;
-            }
-            update() {
-                if (this.isPlayer) {
-                    if (keys['KeyW']) this.y -= 5; if (keys['KeyS']) this.y += 5;
-                    if (keys['KeyA']) this.x -= 5; if (keys['KeyD']) this.x += 5;
-                    const cx = this.x - canvas.width / 2;
-                    const cy = this.y - canvas.height / 2;
-                    this.angle = Math.atan2(mouse.y - (this.y - cy), mouse.x - (this.x - cx));
-                    if (mouse.down) this.shoot();
-                } else {
-                    // Bot AI
-                    let nearest = shapes[0];
-                    if (nearest) {
-                        this.angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
-                        this.x += Math.cos(this.angle) * 3;
-                        this.y += Math.sin(this.angle) * 3;
-                        if (Math.random() > 0.97) this.shoot();
-                    }
-                }
-                this.x = Math.max(0, Math.min(WORLD_SIZE, this.x));
-                this.y = Math.max(0, Math.min(WORLD_SIZE, this.y));
-                
-                if (this.score >= 500) { this.type = "Twin"; this.fireRate = 250; }
-            }
-            shoot() {
-                if (Date.now() - this.lastShot > this.fireRate) {
-                    if (this.type === "Basic") {
-                        bullets.push(new Bullet(this.x, this.y, this.angle, this.team, this.color));
-                    } else {
-                        bullets.push(new Bullet(this.x + Math.cos(this.angle+0.3)*15, this.y + Math.sin(this.angle+0.3)*15, this.angle, this.team, this.color));
-                        bullets.push(new Bullet(this.x + Math.cos(this.angle-0.3)*15, this.y + Math.sin(this.angle-0.3)*15, this.angle, this.team, this.color));
-                    }
-                    this.lastShot = Date.now();
-                }
-            }
-            draw(cx, cy) {
-                ctx.save();
-                ctx.translate(this.x - cx, this.y - cy);
-                ctx.rotate(this.angle);
-                ctx.fillStyle = "#999";
-                if(this.type === "Twin") {
-                    ctx.fillRect(10, -15, 30, 12); ctx.fillRect(10, 3, 30, 12);
-                } else { ctx.fillRect(10, -10, 35, 20); }
-                ctx.restore();
-                ctx.beginPath();
-                ctx.arc(this.x - cx, this.y - cy, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.strokeStyle = "#444"; ctx.lineWidth = 4; ctx.stroke();
-            }
-        }
-
-        class Shape {
-            constructor(isBoss = false) {
-                this.isBoss = isBoss;
-                this.x = isBoss ? WORLD_SIZE/2 : Math.random() * WORLD_SIZE;
-                this.y = isBoss ? WORLD_SIZE/2 : Math.random() * WORLD_SIZE;
-                this.hp = isBoss ? 2000 : 20;
-                this.size = isBoss ? 100 : 20;
-                this.color = isBoss ? "#be7ff5" : "#ffe869";
-            }
-            draw(cx, cy) {
-                ctx.fillStyle = this.color;
-                ctx.strokeStyle = "#555"; ctx.lineWidth = 3;
-                ctx.fillRect(this.x - cx - this.size/2, this.y - cy - this.size/2, this.size, this.size);
-                ctx.strokeRect(this.x - cx - this.size/2, this.y - cy - this.size/2, this.size, this.size);
-            }
-        }
-
-        function init() {
-            player = new Tank("Mavi", true);
-            tanks.push(player);
-            for(let i=0; i<9; i++) tanks.push(new Tank("Mavi"));
-            for(let i=0; i<10; i++) tanks.push(new Tank("Kırmızı"));
-            for(let i=0; i<100; i++) shapes.push(new Shape());
-            shapes.push(new Shape(true)); // Boss
-            requestAnimationFrame(loop);
-        }
-
-        function loop() {
-            const cx = player.x - canvas.width / 2;
-            const cy = player.y - canvas.height / 2;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Izgara
-            ctx.strokeStyle = "#bbb";
-            for(let x = -cx % 50; x < canvas.width; x += 50) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-            }
-            for(let y = -cy % 50; y < canvas.height; y += 50) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-            }
-
-            // Objeleri Güncelle
-            shapes.forEach((s, si) => {
-                s.draw(cx, cy);
-            });
-
-            bullets.forEach((b, bi) => {
-                b.update(); b.draw(cx, cy);
-                if (b.life < 0) bullets.splice(bi, 1);
-                
-                shapes.forEach((s, si) => {
-                    if (Math.hypot(b.x - s.x, b.y - s.y) < s.size) {
-                        s.hp -= 10; bullets.splice(bi, 1);
-                        if (s.hp <= 0) {
-                            if (b.team === "Mavi") player.score += s.isBoss ? 1000 : 50;
-                            shapes.splice(si, 1);
-                            if (!s.isBoss) shapes.push(new Shape());
-                        }
-                    }
-                });
-            });
-
-            tanks.forEach(t => {
-                t.update(); t.draw(cx, cy);
-            });
-
-            // Mini Map
-            mCtx.clearRect(0, 0, 160, 160);
-            const s = 160 / WORLD_SIZE;
-            tanks.forEach(t => {
-                mCtx.fillStyle = t.color;
-                if (t.isPlayer) mCtx.fillStyle = "white";
-                mCtx.fillRect(t.x * s, t.y * s, 4, 4);
-            });
-
-            document.getElementById("scoreDisplay").innerText = "Puan: " + player.score;
-            document.getElementById("levelDisplay").innerText = "Seviye: " + (Math.floor(player.score/500)+1);
-            document.getElementById("classDisplay").innerText = "Sınıf: " + player.type;
-
-            requestAnimationFrame(loop);
-        }
-
-        init();
-        window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    </script>
-</body>
-</html>
+    <div id="ui">
+        <div id="scoreDisplay">Puan: 0</div>
+        <div id="classDisplay" style="color: #00b2e1; font-size: 1.2em;">Sınıf: Basic</div>
+        <div id="buffDisplay">Buff: Yok</div>
+        <progress id="hpBar" value="100" max="100" style="width: 100%; height: 10;"></progress>
+    </div>
