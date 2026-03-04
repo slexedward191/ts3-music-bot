@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Arena Zombi v2.4 Scaling Tank</title>
+<title>Arena Zombi</title>
 <style>
 body{
     margin:0;
@@ -234,15 +234,14 @@ class Zombie{
         }
 
         if(type==="tank"){
+            let tankTier = Math.floor(wave / 4);
+            if(tankTier < 1) tankTier = 1;
 
-            let scaling = Math.floor(wave/4); // her 4 wave'de artış
-            let hpBoost = scaling * 500;
-
-            this.r=32;
-            this.speed=45;
-            this.maxHp=1000 + hpBoost;
-            this.color="#063d06";
-            this.damage=55 + scaling*5;
+            this.r=32; 
+            this.speed=45; 
+            this.maxHp=1000 * tankTier;
+            this.color="#063d06"; 
+            this.damage=55;
             this.damageReduction=0.35;
         }
 
@@ -297,7 +296,7 @@ function spawnZombie(){
     zombies.push(new Zombie(type));
 }
 
-/* LEVEL UP & GAME OVER */
+/* LEVEL UP */
 
 function levelUp(){
     paused=true;
@@ -308,7 +307,20 @@ function levelUp(){
         {text:"+20 Hasar",apply:()=>player.damage+=20},
         {text:"+%20 Ateş Hızı",apply:()=>player.fireRate*=0.8},
         {text:"+30 Max HP",apply:()=>{player.maxHp+=30;player.hp+=30}},
-        {text:"+%10 Kritik",apply:()=>player.critChance+=0.1}
+        {text:"+%10 Kritik",apply:()=>player.critChance+=0.1},
+
+        {text:"+5 Mermi",apply:()=>{
+            player.maxAmmo+=5;
+            player.ammo=player.maxAmmo;
+        }},
+        {text:"+10 Mermi",apply:()=>{
+            player.maxAmmo+=10;
+            player.ammo=player.maxAmmo;
+        }},
+        {text:"+20 Mermi",apply:()=>{
+            player.maxAmmo+=20;
+            player.ammo=player.maxAmmo;
+        }}
     ];
 
     upgrades.sort(()=>0.5-Math.random());
@@ -323,6 +335,8 @@ function levelUp(){
         overlay.appendChild(btn);
     });
 }
+
+/* GAME OVER */
 
 function triggerGameOver(){
     gameOver=true;
@@ -388,7 +402,6 @@ function update(timestamp){
                 if(Math.hypot(b.x-z.x,b.y-z.y)<z.r){
 
                     let finalDamage = b.damage;
-
                     if(z.type==="tank"){
                         finalDamage *= (1 - z.damageReduction);
                     }
@@ -426,6 +439,7 @@ function draw(){
     ctx.fillStyle="white";
     ctx.fillText("Level: "+player.level,20,20);
     ctx.fillText("Wave: "+wave,20,40);
+    ctx.fillText("Ammo: "+player.ammo+" / "+player.maxAmmo,20,60);
 }
 
 startWave();
