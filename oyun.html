@@ -68,16 +68,12 @@ let deltaTime = 0;
 let gameOver = false;
 let paused = false;
 
-/* WAVE */
-
 let wave = 1;
 let zombiesToSpawn = 0;
 let zombiesSpawned = 0;
 let spawnTimer = 0;
 let waveDelay = 3;
 let waveCooldown = 0;
-
-/* INPUT */
 
 let keys = {};
 let mouse = {x:0,y:0};
@@ -122,7 +118,6 @@ class Player{
     }
 
     update(dt){
-
         let vx=0, vy=0;
         if(keys["w"]) vy-=1;
         if(keys["s"]) vy+=1;
@@ -188,10 +183,6 @@ class Player{
     }
 }
 
-const player = new Player();
-
-/* BULLET */
-
 class Bullet{
     constructor(x,y,dx,dy,damage,crit){
         this.x=x;this.y=y;
@@ -213,10 +204,6 @@ class Bullet{
     }
 }
 
-let bullets=[];
-
-/* ZOMBIE */
-
 class Zombie{
     constructor(type){
 
@@ -234,22 +221,18 @@ class Zombie{
         }
 
         if(type==="tank"){
-
             this.r=32; 
             this.speed=45; 
             this.color="#063d06"; 
             this.damage=60;
 
-            // 🔥 HP Scaling (Her 5 wave +5000)
             let hpTier = Math.floor((wave-4) / 5);
             if(hpTier < 0) hpTier = 0;
 
             this.maxHp = 3000 + (hpTier * 5000);
 
-            // 🔥 Damage Reduction Scaling (Her 10 wave +%5, max %60)
             let reductionBonus = Math.floor(wave / 10) * 0.05;
             this.damageReduction = 0.35 + reductionBonus;
-
             if(this.damageReduction > 0.60)
                 this.damageReduction = 0.60;
         }
@@ -286,16 +269,16 @@ class Zombie{
     }
 }
 
+const player = new Player();
+let bullets=[];
 let zombies=[];
 
-/* SPAWN */
+/* GAME LOOP TAM */
 
 function startWave(){
     zombiesToSpawn = 5 + wave*3;
     zombiesSpawned = 0;
     spawnTimer = 0;
-    waveText.textContent="WAVE "+wave;
-    setTimeout(()=>waveText.textContent="",1500);
 }
 
 function spawnZombie(){
@@ -305,7 +288,67 @@ function spawnZombie(){
     zombies.push(new Zombie(type));
 }
 
-/* (DEVAM EDİYOR - oyun loop ve diğer kodlar aynı şekilde kalıyor) */
+function update(timestamp){
+    deltaTime=(timestamp-lastTime)/1000;
+    lastTime=timestamp;
+
+    if(!gameOver){
+
+        player.update(deltaTime);
+
+        if(zombiesSpawned<zombiesToSpawn){
+            spawnTimer-=deltaTime;
+            if(spawnTimer<=0){
+                spawnZombie();
+                zombiesSpawned++;
+                spawnTimer=1;
+            }
+        }
+
+        bullets.forEach((b,i)=>{
+            b.update(deltaTime);
+            if(b.x<0||b.x>WIDTH||b.y<0||b.y>HEIGHT)
+                bullets.splice(i,1);
+        });
+
+        zombies.forEach((z,zi)=>{
+            z.update(deltaTime);
+
+            bullets.forEach((b,bi)=>{
+                if(Math.hypot(b.x-z.x,b.y-z.y)<z.r){
+                    let finalDamage=b.damage;
+                    if(z.type==="tank")
+                        finalDamage*= (1 - z.damageReduction);
+
+                    z.hp-=finalDamage;
+                    bullets.splice(bi,1);
+
+                    if(z.hp<=0){
+                        zombies.splice(zi,1);
+                    }
+                }
+            });
+        });
+
+        if(zombiesSpawned===zombiesToSpawn && zombies.length===0){
+            wave++;
+            startWave();
+        }
+    }
+
+    draw();
+    requestAnimationFrame(update);
+}
+
+function draw(){
+    ctx.clearRect(0,0,WIDTH,HEIGHT);
+    bullets.forEach(b=>b.draw());
+    zombies.forEach(z=>z.draw());
+    player.draw();
+}
+
+startWave();
+requestAnimationFrame(update);
 
 </script>
 </body>
