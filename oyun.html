@@ -2,222 +2,266 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>EmpireX - Prototype</title>
+<title>Empire Domination</title>
 <style>
-body { margin:0; overflow:hidden; background:#0f0f0f; font-family:Arial; }
-canvas { display:block; }
-#ui {
-  position:fixed;
-  top:10px;
-  left:10px;
-  color:white;
-  background:rgba(0,0,0,0.5);
-  padding:10px;
-  border-radius:8px;
+body{margin:0;overflow:hidden;background:#0f0f0f;font-family:Arial}
+canvas{display:block}
+#ui{
+position:fixed;top:10px;left:10px;
+background:rgba(0,0,0,0.6);
+color:white;padding:10px;border-radius:10px;
+min-width:200px
 }
-button {
-  margin-top:5px;
-  padding:5px 10px;
-  cursor:pointer;
-}
+button{margin-top:5px;padding:5px 8px;cursor:pointer}
 </style>
 </head>
 <body>
+
 <div id="ui">
-  <div>Gold: <span id="gold">0</span></div>
-  <div>Health: <span id="health">100</span></div>
-  <button onclick="spawnSoldier()">Spawn Soldier (10 Gold)</button>
+<div>Gold: <span id="gold">0</span></div>
+<div>XP: <span id="xp">0</span></div>
+<div>Level: <span id="level">1</span></div>
+<div>Health: <span id="health">100</span></div>
+<button onclick="spawnSoldier()">Spawn Soldier (15)</button>
+<button onclick="buildTower()">Build Tower (50)</button>
 </div>
+
 <canvas id="game"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+canvas.width=innerWidth;
+canvas.height=innerHeight;
 
-const WORLD = 3000;
-let keys = {};
-let zoom = 1;
+const WORLD=4000;
+let zoom=1;
+let keys={};
+let wave=1;
 
-window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-window.addEventListener("wheel", e=>{
-  zoom += e.deltaY * -0.001;
-  zoom = Math.min(Math.max(0.5, zoom), 2);
+addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+addEventListener("wheel",e=>{
+zoom+=e.deltaY*-0.001;
+zoom=Math.min(Math.max(0.5,zoom),2);
 });
 
-class Entity {
-  constructor(x,y,size,color){
-    this.x=x; this.y=y;
-    this.size=size;
-    this.color=color;
-    this.health=100;
-  }
-  draw(){
-    ctx.fillStyle=this.color;
-    ctx.beginPath();
-    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
-    ctx.fill();
-  }
+class Entity{
+constructor(x,y,size,color){
+this.x=x;this.y=y;
+this.size=size;
+this.color=color;
+this.health=100;
+}
+draw(){
+ctx.fillStyle=this.color;
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+ctx.fill();
+}
 }
 
 class Player extends Entity{
-  constructor(){
-    super(WORLD/2,WORLD/2,20,"cyan");
-    this.speed=4;
-    this.gold=0;
-  }
-  update(){
-    if(keys["w"]) this.y-=this.speed;
-    if(keys["s"]) this.y+=this.speed;
-    if(keys["a"]) this.x-=this.speed;
-    if(keys["d"]) this.x+=this.speed;
-    this.x=Math.max(0,Math.min(WORLD,this.x));
-    this.y=Math.max(0,Math.min(WORLD,this.y));
-  }
+constructor(){
+super(WORLD/2,WORLD/2,22,"cyan");
+this.speed=4;
+this.gold=50;
+this.xp=0;
+this.level=1;
+}
+update(){
+if(keys["w"])this.y-=this.speed;
+if(keys["s"])this.y+=this.speed;
+if(keys["a"])this.x-=this.speed;
+if(keys["d"])this.x+=this.speed;
+this.x=Math.max(0,Math.min(WORLD,this.x));
+this.y=Math.max(0,Math.min(WORLD,this.y));
+if(this.xp>=this.level*50){
+this.xp=0;
+this.level++;
+this.health=100;
+}
+}
 }
 
 class Soldier extends Entity{
-  constructor(x,y){
-    super(x,y,10,"lime");
-    this.speed=2;
-  }
-  update(){
-    let dx=player.x-this.x;
-    let dy=player.y-this.y;
-    let dist=Math.hypot(dx,dy);
-    if(dist>40){
-      this.x+=dx/dist*this.speed;
-      this.y+=dy/dist*this.speed;
-    }
-  }
+constructor(x,y,index){
+super(x,y,10,"lime");
+this.speed=2;
+this.index=index;
+}
+update(){
+let angle=(Math.PI*2/soldiers.length)*this.index;
+let targetX=player.x+Math.cos(angle)*40;
+let targetY=player.y+Math.sin(angle)*40;
+let dx=targetX-this.x;
+let dy=targetY-this.y;
+let dist=Math.hypot(dx,dy);
+if(dist>2){
+this.x+=dx/dist*this.speed;
+this.y+=dy/dist*this.speed;
+}
+}
 }
 
 class Enemy extends Entity{
-  constructor(){
-    super(Math.random()*WORLD,Math.random()*WORLD,18,"red");
-    this.speed=1.5;
-  }
-  update(){
-    let dx=player.x-this.x;
-    let dy=player.y-this.y;
-    let dist=Math.hypot(dx,dy);
-    if(dist<500){
-      this.x+=dx/dist*this.speed;
-      this.y+=dy/dist*this.speed;
-    }
-    if(dist<25){
-      player.health-=0.1;
-    }
-  }
+constructor(boss=false){
+super(Math.random()*WORLD,Math.random()*WORLD,boss?40:18,boss?"purple":"red");
+this.speed=boss?1:1.8;
+this.health=boss?500:100;
+this.boss=boss;
+}
+update(){
+let dx=player.x-this.x;
+let dy=player.y-this.y;
+let dist=Math.hypot(dx,dy);
+if(dist<600){
+this.x+=dx/dist*this.speed;
+this.y+=dy/dist*this.speed;
+}
+if(dist<25){
+player.health-=0.2;
+}
+}
 }
 
-class Gold {
-  constructor(){
-    this.x=Math.random()*WORLD;
-    this.y=Math.random()*WORLD;
-    this.size=6;
-  }
-  draw(){
-    ctx.fillStyle="gold";
-    ctx.beginPath();
-    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
-    ctx.fill();
-  }
+class Tower extends Entity{
+constructor(x,y){
+super(x,y,15,"orange");
+this.range=250;
+}
+update(){
+enemies.forEach(e=>{
+let d=Math.hypot(this.x-e.x,this.y-e.y);
+if(d<this.range){
+e.health-=0.3;
+}
+});
+}
+}
+
+class Gold{
+constructor(){
+this.x=Math.random()*WORLD;
+this.y=Math.random()*WORLD;
+this.size=6;
+}
+draw(){
+ctx.fillStyle="gold";
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+ctx.fill();
+}
 }
 
 const player=new Player();
 const soldiers=[];
 const enemies=[];
+const towers=[];
 const golds=[];
 
-for(let i=0;i<150;i++) golds.push(new Gold());
-for(let i=0;i<5;i++) enemies.push(new Enemy());
+for(let i=0;i<200;i++)golds.push(new Gold());
+spawnWave();
 
-function spawnSoldier(){
-  if(player.gold>=10){
-    player.gold-=10;
-    soldiers.push(new Soldier(player.x,player.y));
-  }
+function spawnWave(){
+for(let i=0;i<wave*3;i++)enemies.push(new Enemy());
+if(wave%5===0)enemies.push(new Enemy(true));
+wave++;
 }
 
-function drawGrid(){
-  ctx.strokeStyle="#1a1a1a";
-  for(let x=0;x<WORLD;x+=100){
-    ctx.beginPath();
-    ctx.moveTo(x,0);
-    ctx.lineTo(x,WORLD);
-    ctx.stroke();
-  }
-  for(let y=0;y<WORLD;y+=100){
-    ctx.beginPath();
-    ctx.moveTo(0,y);
-    ctx.lineTo(WORLD,y);
-    ctx.stroke();
-  }
+function spawnSoldier(){
+if(player.gold>=15){
+player.gold-=15;
+soldiers.push(new Soldier(player.x,player.y,soldiers.length));
+}
+}
+
+function buildTower(){
+if(player.gold>=50){
+player.gold-=50;
+towers.push(new Tower(player.x,player.y));
+}
 }
 
 function update(){
-  player.update();
-  soldiers.forEach(s=>s.update());
-  enemies.forEach(e=>e.update());
+player.update();
+soldiers.forEach(s=>s.update());
+towers.forEach(t=>t.update());
+enemies.forEach(e=>e.update());
 
-  golds.forEach((g,i)=>{
-    if(Math.hypot(player.x-g.x,player.y-g.y)<20){
-      player.gold++;
-      golds.splice(i,1);
-    }
-  });
+golds.forEach((g,i)=>{
+if(Math.hypot(player.x-g.x,player.y-g.y)<20){
+player.gold++;
+golds.splice(i,1);
+}
+});
 
-  enemies.forEach((e,ei)=>{
-    soldiers.forEach((s,si)=>{
-      if(Math.hypot(s.x-e.x,s.y-e.y)<20){
-        e.health-=0.5;
-        s.health-=0.3;
-      }
-    });
-    if(e.health<=0){
-      enemies.splice(ei,1);
-      enemies.push(new Enemy());
-      player.gold+=5;
-    }
-  });
+enemies.forEach((e,ei)=>{
+soldiers.forEach(s=>{
+if(Math.hypot(s.x-e.x,s.y-e.y)<20){
+e.health-=0.8;
+}
+});
+if(e.health<=0){
+player.gold+=10;
+player.xp+=20;
+enemies.splice(ei,1);
+}
+});
 
-  soldiers.forEach((s,i)=>{
-    if(s.health<=0) soldiers.splice(i,1);
-  });
+if(enemies.length===0)spawnWave();
+}
+
+function drawGrid(){
+ctx.strokeStyle="#1a1a1a";
+for(let x=0;x<WORLD;x+=100){
+ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,WORLD);ctx.stroke();
+}
+for(let y=0;y<WORLD;y+=100){
+ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WORLD,y);ctx.stroke();
+}
+}
+
+function drawMiniMap(){
+let w=200,h=200;
+ctx.fillStyle="#000";
+ctx.fillRect(canvas.width-w-20,20,w,h);
+ctx.fillStyle="white";
+ctx.fillRect(canvas.width-w-20+(player.x/WORLD)*w,
+20+(player.y/WORLD)*h,5,5);
 }
 
 function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.save();
-  ctx.scale(zoom,zoom);
-  ctx.translate(
-    -player.x + canvas.width/2/zoom,
-    -player.y + canvas.height/2/zoom
-  );
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.save();
+ctx.scale(zoom,zoom);
+ctx.translate(-player.x+canvas.width/2/zoom,
+-player.y+canvas.height/2/zoom);
 
-  drawGrid();
-  golds.forEach(g=>g.draw());
-  enemies.forEach(e=>e.draw());
-  soldiers.forEach(s=>s.draw());
-  player.draw();
+drawGrid();
+golds.forEach(g=>g.draw());
+towers.forEach(t=>t.draw());
+soldiers.forEach(s=>s.draw());
+enemies.forEach(e=>e.draw());
+player.draw();
 
-  ctx.restore();
+ctx.restore();
+drawMiniMap();
 
-  document.getElementById("gold").innerText=Math.floor(player.gold);
-  document.getElementById("health").innerText=Math.floor(player.health);
+gold.innerText=player.gold;
+xp.innerText=player.xp;
+level.innerText=player.level;
+health.innerText=Math.floor(player.health);
 }
 
 function loop(){
-  update();
-  draw();
-  if(player.health>0){
-    requestAnimationFrame(loop);
-  }else{
-    alert("Game Over");
-  }
+update();
+draw();
+if(player.health>0){
+requestAnimationFrame(loop);
+}else{
+alert("Empire Fell.");
+}
 }
 
 loop();
