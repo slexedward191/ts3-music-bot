@@ -2,380 +2,62 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Vox Arena</title>
+<title>Oyun</title>
 <style>
-body{margin:0;background:#111;overflow:hidden;font-family:Arial}
-canvas{display:block;margin:0 auto;background:#181818}
+body{
+margin:0;
+background:#111;
+font-family:Arial, sans-serif;
+overflow:hidden;
+}
+
+.center-text{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+font-size:48px;
+font-weight:bold;
+color:#ff4444;
+text-shadow:0 0 20px red;
+text-align:center;
+}
+
+.home-button{
+position:absolute;
+top:20px;
+left:20px;
+padding:12px 20px;
+font-size:16px;
+font-weight:bold;
+border:none;
+border-radius:8px;
+cursor:pointer;
+background:linear-gradient(45deg,#00c6ff,#0072ff);
+color:white;
+box-shadow:0 0 10px #00c6ff;
+transition:0.2s;
+}
+
+.home-button:hover{
+transform:scale(1.1);
+box-shadow:0 0 20px #00c6ff;
+}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+
+<button class="home-button" onclick="goHome()">🏠 Anasayfaya Dön</button>
+
+<div class="center-text">
+BAKIMDA<br>HENÜZ YAPILMADI
+</div>
+
 <script>
-
-/* ============================
-   BASIC ENGINE
-============================ */
-
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-
-canvas.width = 1280;
-canvas.height = 720;
-
-let keys = {};
-let mouse = {x:0,y:0,down:false};
-
-document.addEventListener("keydown",e=>keys[e.code]=true);
-document.addEventListener("keyup",e=>keys[e.code]=false);
-
-canvas.addEventListener("mousemove",e=>{
-let rect = canvas.getBoundingClientRect();
-mouse.x = e.clientX - rect.left;
-mouse.y = e.clientY - rect.top;
-});
-canvas.addEventListener("mousedown",()=>mouse.down=true);
-canvas.addEventListener("mouseup",()=>mouse.down=false);
-
-function rand(a,b){ return Math.random()*(b-a)+a; }
-function dist(a,b,c,d){ return Math.hypot(a-c,b-d); }
-function angle(a,b,c,d){ return Math.atan2(d-b,c-a); }
-
-/* ============================
-   ENTITY SYSTEM
-============================ */
-
-let entities = [];
-
-class Entity{
-constructor(x,y,r){
-this.x=x;this.y=y;this.r=r;this.remove=false;
+function goHome(){
+window.location.href="index.html"; 
 }
-update(dt){}
-render(){}
-}
-
-function add(e){ entities.push(e); }
-
-/* ============================
-   PLAYER
-============================ */
-
-class Player extends Entity{
-constructor(){
-super(canvas.width/2,canvas.height/2,20);
-this.speed=300;
-this.maxHp=100;
-this.hp=100;
-this.level=1;
-this.xp=0;
-this.nextXp=50;
-this.damage=20;
-this.fireRate=0.3;
-this.fireTimer=0;
-}
-
-update(dt){
-
-let vx=0,vy=0;
-if(keys["KeyW"]) vy-=1;
-if(keys["KeyS"]) vy+=1;
-if(keys["KeyA"]) vx-=1;
-if(keys["KeyD"]) vx+=1;
-
-let len=Math.hypot(vx,vy);
-if(len>0){vx/=len;vy/=len;}
-
-this.x+=vx*this.speed*dt;
-this.y+=vy*this.speed*dt;
-
-this.x=Math.max(this.r,Math.min(canvas.width-this.r,this.x));
-this.y=Math.max(this.r,Math.min(canvas.height-this.r,this.y));
-
-this.fireTimer-=dt;
-
-if(mouse.down && this.fireTimer<=0){
-this.fireTimer=this.fireRate;
-let a=angle(this.x,this.y,mouse.x,mouse.y);
-add(new Bullet(this.x,this.y,a,this.damage));
-}
-
-}
-
-render(){
-ctx.fillStyle="cyan";
-ctx.beginPath();
-ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-ctx.fill();
-}
-
-gainXP(v){
-this.xp+=v;
-if(this.xp>=this.nextXp){
-this.xp=0;
-this.level++;
-this.nextXp+=30;
-openUpgrade();
-}
-}
-
-takeDamage(d){
-this.hp-=d;
-if(this.hp<=0) gameOver=true;
-}
-}
-
-let player;
-
-/* ============================
-   BULLET
-============================ */
-
-class Bullet extends Entity{
-constructor(x,y,a,d){
-super(x,y,5);
-this.speed=600;
-this.dx=Math.cos(a);
-this.dy=Math.sin(a);
-this.damage=d;
-}
-
-update(dt){
-this.x+=this.dx*this.speed*dt;
-this.y+=this.dy*this.speed*dt;
-
-if(this.x<0||this.x>canvas.width||this.y<0||this.y>canvas.height)
-this.remove=true;
-
-for(let e of entities){
-if(e instanceof Enemy && !e.remove){
-if(dist(this.x,this.y,e.x,e.y)<this.r+e.r){
-e.hp-=this.damage;
-this.remove=true;
-if(e.hp<=0){
-player.gainXP(20);
-e.remove=true;
-}
-}
-}
-}
-}
-
-render(){
-ctx.fillStyle="white";
-ctx.beginPath();
-ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-ctx.fill();
-}
-}
-
-/* ============================
-   ENEMY
-============================ */
-
-class Enemy extends Entity{
-constructor(){
-super(rand(0,canvas.width),rand(0,canvas.height),18);
-this.speed=100+rand(0,50);
-this.hp=50;
-}
-
-update(dt){
-let a=angle(this.x,this.y,player.x,player.y);
-this.x+=Math.cos(a)*this.speed*dt;
-this.y+=Math.sin(a)*this.speed*dt;
-
-if(dist(this.x,this.y,player.x,player.y)<this.r+player.r){
-player.takeDamage(20*dt);
-}
-}
-
-render(){
-ctx.fillStyle="red";
-ctx.beginPath();
-ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-ctx.fill();
-}
-}
-
-/* ============================
-   BOSS
-============================ */
-
-class Boss extends Entity{
-constructor(){
-super(canvas.width/2,100,60);
-this.maxHp=2000;
-this.hp=2000;
-this.speed=80;
-this.timer=0;
-}
-
-update(dt){
-let a=angle(this.x,this.y,player.x,player.y);
-this.x+=Math.cos(a)*this.speed*dt;
-this.y+=Math.sin(a)*this.speed*dt;
-
-this.timer-=dt;
-
-if(this.timer<=0){
-this.timer=2;
-for(let i=0;i<20;i++){
-let ang=(Math.PI*2/20)*i;
-add(new EnemyBullet(this.x,this.y,ang));
-}
-}
-
-if(dist(this.x,this.y,player.x,player.y)<this.r+player.r){
-player.takeDamage(40*dt);
-}
-}
-
-render(){
-ctx.fillStyle="purple";
-ctx.beginPath();
-ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-ctx.fill();
-}
-}
-
-class EnemyBullet extends Entity{
-constructor(x,y,a){
-super(x,y,6);
-this.speed=250;
-this.dx=Math.cos(a);
-this.dy=Math.sin(a);
-}
-
-update(dt){
-this.x+=this.dx*this.speed*dt;
-this.y+=this.dy*this.speed*dt;
-
-if(dist(this.x,this.y,player.x,player.y)<this.r+player.r){
-player.takeDamage(10);
-this.remove=true;
-}
-}
-
-render(){
-ctx.fillStyle="orange";
-ctx.beginPath();
-ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-ctx.fill();
-}
-}
-
-/* ============================
-   WAVE SYSTEM
-============================ */
-
-let wave=1;
-let spawnTimer=0;
-
-function updateWave(dt){
-spawnTimer-=dt;
-
-if(spawnTimer<=0){
-spawnTimer=1;
-add(new Enemy());
-}
-
-if(wave%5===0 && !entities.some(e=>e instanceof Boss)){
-add(new Boss());
-wave++;
-}
-}
-
-/* ============================
-   UPGRADE SYSTEM
-============================ */
-
-let upgradeActive=false;
-
-const upgrades=[
-()=>player.damage+=10,
-()=>player.maxHp+=20,
-()=>player.fireRate*=0.8
-];
-
-function openUpgrade(){
-upgradeActive=true;
-}
-
-function renderUpgrade(){
-ctx.fillStyle="rgba(0,0,0,0.8)";
-ctx.fillRect(0,0,canvas.width,canvas.height);
-
-ctx.fillStyle="white";
-ctx.font="30px Arial";
-ctx.textAlign="center";
-ctx.fillText("1: Damage +10",canvas.width/2,300);
-ctx.fillText("2: HP +20",canvas.width/2,350);
-ctx.fillText("3: Fire Rate +20%",canvas.width/2,400);
-}
-
-document.addEventListener("keydown",e=>{
-if(upgradeActive){
-if(e.code==="Digit1"){upgrades[0]();upgradeActive=false;}
-if(e.code==="Digit2"){upgrades[1]();upgradeActive=false;}
-if(e.code==="Digit3"){upgrades[2]();upgradeActive=false;}
-}
-});
-
-/* ============================
-   GAME LOOP
-============================ */
-
-let gameOver=false;
-let last=0;
-
-function loop(t){
-let dt=(t-last)/1000;
-last=t;
-
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-if(!gameOver){
-
-if(!upgradeActive){
-updateWave(dt);
-for(let e of entities) e.update(dt);
-entities=entities.filter(e=>!e.remove);
-}
-
-player.update(dt);
-player.render();
-
-for(let e of entities) e.render();
-
-renderHUD();
-
-if(upgradeActive) renderUpgrade();
-
-}else{
-ctx.fillStyle="white";
-ctx.font="50px Arial";
-ctx.textAlign="center";
-ctx.fillText("GAME OVER",canvas.width/2,350);
-}
-
-requestAnimationFrame(loop);
-}
-
-function renderHUD(){
-ctx.fillStyle="white";
-ctx.textAlign="left";
-ctx.fillText("HP: "+Math.floor(player.hp),20,30);
-ctx.fillText("Level: "+player.level,20,50);
-ctx.fillText("Wave: "+wave,20,70);
-}
-
-/* ============================
-   START
-============================ */
-
-player=new Player();
-requestAnimationFrame(loop);
-
 </script>
+
 </body>
 </html>
