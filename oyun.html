@@ -2,328 +2,629 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Arena Survivor</title>
+<title>ARENA X ENGINE</title>
 <style>
 body{
 margin:0;
-background:#0e0e0e;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
+background:#0b0b0b;
+overflow:hidden;
 font-family:Arial;
 color:white;
-overflow:hidden;
 }
 canvas{
-background:#1a1a1a;
+display:block;
+margin:auto;
+background:#121212;
 border:4px solid #333;
-}
-.panel{
-position:absolute;
-background:rgba(0,0,0,0.7);
-padding:10px;
-font-size:14px;
-}
-#upgradePanel{bottom:10px;left:10px;width:260px;}
-#statsPanel{bottom:10px;right:10px;width:260px;}
-#overlay{
-position:absolute;
-width:1200px;
-height:700px;
-background:rgba(0,0,0,0.95);
-display:flex;
-justify-content:center;
-align-items:center;
-flex-direction:column;
-text-align:center;
-}
-button{
-padding:12px 25px;
-margin:10px;
-font-size:18px;
-cursor:pointer;
 }
 </style>
 </head>
 <body>
 
-<canvas id="game" width="1200" height="700"></canvas>
-<div id="overlay"></div>
-<div id="upgradePanel" class="panel"></div>
-<div id="statsPanel" class="panel"></div>
+<canvas id="game" width="1280" height="720"></canvas>
 
 <script>
 
-/* ================= ENGINE ================= */
+/* =========================
+   CORE ENGINE
+========================= */
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const overlay = document.getElementById("overlay");
-const upgradePanel = document.getElementById("upgradePanel");
-const statsPanel = document.getElementById("statsPanel");
 
-const WIDTH = canvas.width;
-const HEIGHT = canvas.height;
+const GAME = {
+width: canvas.width,
+height: canvas.height,
+lastTime: 0,
+delta: 0,
+state: "BOOT",
+entities: [],
+ui: [],
+effects: [],
+debug: false
+};
 
-let last=0;
-let dt=0;
-let gameState="menu";
-let screenShake=0;
+/* =========================
+   GAME LOOP
+========================= */
 
-/* ================= INPUT ================= */
+function gameLoop(timestamp){
+GAME.delta = (timestamp - GAME.lastTime) / 1000;
+GAME.lastTime = timestamp;
 
-let keys={};
-let mouse={x:0,y:0};
+update(GAME.delta);
+render();
 
-document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+requestAnimationFrame(gameLoop);
+}
 
-canvas.addEventListener("mousemove",e=>{
-const r=canvas.getBoundingClientRect();
-mouse.x=e.clientX-r.left;
-mouse.y=e.clientY-r.top;
+function update(dt){
+if(GAME.stateManager){
+GAME.stateManager.update(dt);
+}
+}
+
+function render(){
+ctx.clearRect(0,0,GAME.width,GAME.height);
+
+if(GAME.stateManager){
+GAME.stateManager.render(ctx);
+}
+}
+
+requestAnimationFrame(gameLoop);
+
+/* =========================
+   STATE MANAGER
+========================= */
+
+class StateManager{
+constructor(){
+this.states = {};
+this.current = null;
+}
+
+add(name,state){
+this.states[name] = state;
+}
+
+change(name){
+if(this.states[name]){
+this.current = this.states[name];
+if(this.current.enter){
+this.current.enter();
+}
+}
+}
+
+update(dt){
+if(this.current && this.current.update){
+this.current.update(dt);
+}
+}
+
+render(ctx){
+if(this.current && this.current.render){
+this.current.render(ctx);
+}
+}
+}
+
+GAME.stateManager = new StateManager();
+
+/* =========================
+   INPUT SYSTEM
+========================= */
+
+const INPUT = {
+keys:{},
+mouse:{x:0,y:0,down:false}
+};
+
+document.addEventListener("keydown",e=>{
+INPUT.keys[e.key.toLowerCase()] = true;
+});
+document.addEventListener("keyup",e=>{
+INPUT.keys[e.key.toLowerCase()] = false;
 });
 
-/* ================= PLAYER ================= */
+canvas.addEventListener("mousemove",e=>{
+const r = canvas.getBoundingClientRect();
+INPUT.mouse.x = e.clientX - r.left;
+INPUT.mouse.y = e.clientY - r.top;
+});
+canvas.addEventListener("mousedown",()=>INPUT.mouse.down=true);
+canvas.addEventListener("mouseup",()=>INPUT.mouse.down=false);
 
-class Player{
-constructor(){this.reset();}
-reset(){
-this.x=WIDTH/2;
-this.y=HEIGHT/2;
-this.r=18;
-this.speed=240;
-this.maxHp=100;
-this.hp=100;
-this.hearts=3;
-this.damage=20;
-this.fireRate=0.25;
-this.fireTimer=0;
-this.level=1;
-this.xp=0;
-this.xpNeed=100;
-this.upgrades=[];
+/* =========================
+   BASIC UTILITIES
+========================= */
+
+const UTIL = {
+clamp(v,min,max){ return Math.max(min,Math.min(max,v)); },
+dist(x1,y1,x2,y2){
+return Math.hypot(x2-x1,y2-y1);
+},
+angle(x1,y1,x2,y2){
+return Math.atan2(y2-y1,x2-x1);
+},
+rand(min,max){
+return Math.random()*(max-min)+min;
+}
+};
+
+/* =========================
+   BOOT STATE
+========================= */
+
+const BootState = {
+enter(){
+GAME.stateManager.change("MENU");
+}
+};
+
+/* =========================
+   MENU STATE
+========================= */
+
+const MenuState = {
+enter(){},
+update(dt){
+if(INPUT.mouse.down){
+GAME.stateManager.change("PLAY");
+}
+},
+render(ctx){
+ctx.fillStyle="white";
+ctx.textAlign="center";
+ctx.font="48px Arial";
+ctx.fillText("ARENA X",GAME.width/2,250);
+
+ctx.font="22px Arial";
+ctx.fillText("Başlamak için tıkla",GAME.width/2,320);
+}
+};
+
+/* =========================
+   EMPTY PLAY STATE (ŞİMDİLİK)
+========================= */
+
+const PlayState = {
+enter(){},
+update(dt){},
+render(ctx){
+ctx.fillStyle="white";
+ctx.fillText("ENGINE HAZIR",50,50);
+}
+};
+
+/* =========================
+   REGISTER STATES
+========================= */
+
+GAME.stateManager.add("BOOT",BootState);
+GAME.stateManager.add("MENU",MenuState);
+GAME.stateManager.add("PLAY",PlayState);
+
+GAME.stateManager.change("BOOT");
+/* =====================================================
+   ENTITY SYSTEM
+===================================================== */
+
+class Entity {
+constructor(x,y,r=10){
+this.x = x;
+this.y = y;
+this.vx = 0;
+this.vy = 0;
+this.r = r;
+this.remove = false;
+}
+
+update(dt){
+this.x += this.vx * dt;
+this.y += this.vy * dt;
+}
+
+render(ctx){
+ctx.fillStyle="white";
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+GAME.entities = [];
+
+GAME.addEntity = function(e){
+GAME.entities.push(e);
+};
+
+GAME.updateEntities = function(dt){
+for(let i=GAME.entities.length-1;i>=0;i--){
+let e = GAME.entities[i];
+e.update(dt);
+if(e.remove){
+GAME.entities.splice(i,1);
+}
+}
+};
+
+GAME.renderEntities = function(ctx){
+GAME.entities.forEach(e=>e.render(ctx));
+};
+
+/* =====================================================
+   COLLISION SYSTEM
+===================================================== */
+
+const COLLISION = {
+circle(a,b){
+return UTIL.dist(a.x,a.y,b.x,b.y) < a.r + b.r;
+}
+};
+
+/* =====================================================
+   CAMERA SYSTEM
+===================================================== */
+
+const CAMERA = {
+x:0,
+y:0,
+shakePower:0,
+update(dt){
+if(this.shakePower>0){
+this.shakePower *= 0.9;
+if(this.shakePower < 0.2) this.shakePower=0;
+}
+},
+apply(ctx){
+if(this.shakePower>0){
+ctx.translate(
+( Math.random()-0.5 ) * this.shakePower,
+( Math.random()-0.5 ) * this.shakePower
+);
+}
+}
+};
+
+/* =====================================================
+   PARTICLE ENGINE
+===================================================== */
+
+class Particle extends Entity{
+constructor(x,y,color){
+super(x,y,3);
+this.life = UTIL.rand(0.4,0.8);
+this.maxLife = this.life;
+this.color = color;
+this.vx = UTIL.rand(-200,200);
+this.vy = UTIL.rand(-200,200);
+}
+
+update(dt){
+super.update(dt);
+this.life -= dt;
+if(this.life<=0) this.remove = true;
+}
+
+render(ctx){
+ctx.globalAlpha = this.life/this.maxLife;
+ctx.fillStyle=this.color;
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+ctx.fill();
+ctx.globalAlpha=1;
+}
+}
+
+function spawnExplosion(x,y,color="orange"){
+for(let i=0;i<15;i++){
+GAME.addEntity(new Particle(x,y,color));
+}
+CAMERA.shakePower = 12;
+}
+
+/* =====================================================
+   DAMAGE NUMBER SYSTEM
+===================================================== */
+
+class DamageNumber extends Entity{
+constructor(x,y,value){
+super(x,y,0);
+this.value=value;
+this.life=1;
+}
+
+update(dt){
+this.y -= 40*dt;
+this.life -= dt;
+if(this.life<=0) this.remove=true;
+}
+
+render(ctx){
+ctx.globalAlpha=this.life;
+ctx.fillStyle="red";
+ctx.font="18px Arial";
+ctx.fillText(this.value,this.x,this.y);
+ctx.globalAlpha=1;
+}
+}
+
+function showDamage(x,y,value){
+GAME.addEntity(new DamageNumber(x,y,value));
+}
+
+/* =====================================================
+   EXTEND PLAY STATE (OVERRIDE)
+===================================================== */
+
+PlayState.update = function(dt){
+CAMERA.update(dt);
+GAME.updateEntities(dt);
+};
+
+PlayState.render = function(ctx){
+ctx.save();
+CAMERA.apply(ctx);
+GAME.renderEntities(ctx);
+ctx.restore();
+
+ctx.fillStyle="white";
+ctx.fillText("Entity Engine Aktif",30,40);
+};
+
+/* =====================================================
+   TEST ENTITY (ENGINE TEST)
+===================================================== */
+
+class TestBall extends Entity{
+constructor(){
+super(GAME.width/2,GAME.height/2,20);
 }
 update(dt){
+super.update(dt);
+
+if(INPUT.keys["w"]) this.y -= 200*dt;
+if(INPUT.keys["s"]) this.y += 200*dt;
+if(INPUT.keys["a"]) this.x -= 200*dt;
+if(INPUT.keys["d"]) this.x += 200*dt;
+
+if(INPUT.mouse.down){
+spawnExplosion(this.x,this.y,"cyan");
+}
+}
+render(ctx){
+ctx.fillStyle="cyan";
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+PlayState.enter = function(){
+GAME.entities = [];
+GAME.addEntity(new TestBall());
+};
+/* =====================================================
+   PLAYER SYSTEM
+===================================================== */
+
+class Player extends Entity{
+constructor(){
+super(GAME.width/2,GAME.height/2,18);
+this.speed = 260;
+this.maxHp = 100;
+this.hp = 100;
+this.hearts = 3;
+this.damage = 20;
+this.fireRate = 0.2;
+this.fireTimer = 0;
+this.level = 1;
+this.xp = 0;
+this.xpNeed = 100;
+}
+
+update(dt){
 let vx=0,vy=0;
-if(keys["w"])vy--;
-if(keys["s"])vy++;
-if(keys["a"])vx--;
-if(keys["d"])vx++;
+
+if(INPUT.keys["w"]) vy--;
+if(INPUT.keys["s"]) vy++;
+if(INPUT.keys["a"]) vx--;
+if(INPUT.keys["d"]) vx++;
+
 let len=Math.hypot(vx,vy);
 if(len){vx/=len;vy/=len;}
-this.x+=vx*this.speed*dt;
-this.y+=vy*this.speed*dt;
-this.x=Math.max(this.r,Math.min(WIDTH-this.r,this.x));
-this.y=Math.max(this.r,Math.min(HEIGHT-this.r,this.y));
 
-this.fireTimer-=dt;
+this.x += vx*this.speed*dt;
+this.y += vy*this.speed*dt;
+
+this.x = UTIL.clamp(this.x,this.r,GAME.width-this.r);
+this.y = UTIL.clamp(this.y,this.r,GAME.height-this.r);
+
+this.fireTimer -= dt;
 if(this.fireTimer<=0){
 this.shoot();
-this.fireTimer=this.fireRate;
+this.fireTimer = this.fireRate;
 }
 }
+
 shoot(){
-let ang=Math.atan2(mouse.y-this.y,mouse.x-this.x);
-bullets.push(new Bullet(this.x,this.y,Math.cos(ang),Math.sin(ang),this.damage));
+let ang = UTIL.angle(this.x,this.y,INPUT.mouse.x,INPUT.mouse.y);
+GAME.addEntity(new Bullet(
+this.x,
+this.y,
+Math.cos(ang),
+Math.sin(ang),
+this.damage
+));
 }
+
+takeDamage(amount){
+this.hp -= amount;
+if(this.hp<=0){
+this.hearts--;
+this.hp=this.maxHp;
+CAMERA.shakePower=15;
+if(this.hearts<=0){
+GAME.stateManager.change("GAMEOVER");
+}
+}
+}
+
 gainXP(v){
 this.xp+=v;
 if(this.xp>=this.xpNeed){
 this.level++;
 this.xp=0;
 this.xpNeed+=80;
-openUpgrade();
 }
 }
-draw(){
+
+render(ctx){
 ctx.fillStyle="#3498db";
 ctx.beginPath();
 ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
 ctx.fill();
 }
 }
-const player=new Player();
 
-/* ================= BULLET ================= */
+/* =====================================================
+   BULLET
+===================================================== */
 
-class Bullet{
-constructor(x,y,dx,dy,dmg){
-this.x=x;this.y=y;
-this.dx=dx;this.dy=dy;
-this.speed=650;
-this.r=4;
-this.dmg=dmg;
+class Bullet extends Entity{
+constructor(x,y,dx,dy,damage){
+super(x,y,4);
+this.vx = dx*700;
+this.vy = dy*700;
+this.damage = damage;
 }
+
 update(dt){
-this.x+=this.dx*this.speed*dt;
-this.y+=this.dy*this.speed*dt;
+super.update(dt);
+
+if(this.x<0||this.x>GAME.width||this.y<0||this.y>GAME.height){
+this.remove=true;
 }
-draw(){
+
+for(let e of GAME.entities){
+if(e instanceof Enemy){
+if(COLLISION.circle(this,e)){
+e.takeDamage(this.damage);
+this.remove=true;
+}
+}
+}
+}
+
+render(ctx){
 ctx.fillStyle="yellow";
 ctx.beginPath();
 ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
 ctx.fill();
 }
 }
-let bullets=[];
 
-/* ================= ENEMY ================= */
+/* =====================================================
+   ENEMY SYSTEM
+===================================================== */
 
-class Enemy{
+class Enemy extends Entity{
 constructor(boss=false){
-this.boss=boss;
-this.r=boss?50:18;
-this.speed=boss?80:110+wave*8;
-this.maxHp=boss?2000:200+wave*40;
-this.hp=this.maxHp;
-this.x=Math.random()<0.5?0:WIDTH;
-this.y=Math.random()*HEIGHT;
-}
-update(dt){
-let a=Math.atan2(player.y-this.y,player.x-this.x);
-this.x+=Math.cos(a)*this.speed*dt;
-this.y+=Math.sin(a)*this.speed*dt;
+super(
+Math.random()<0.5?0:GAME.width,
+UTIL.rand(0,GAME.height),
+boss?50:16
+);
 
-if(Math.hypot(player.x-this.x,player.y-this.y)<player.r+this.r){
-player.hp-=50*dt;
-screenShake=8;
-if(player.hp<=0){
-player.hearts--;
-player.hp=player.maxHp;
-if(player.hearts<=0)gameOver();
+this.boss=boss;
+this.speed=boss?90:120+wave*5;
+this.maxHp=boss?1500:200+wave*30;
+this.hp=this.maxHp;
+}
+
+update(dt){
+let ang = UTIL.angle(this.x,this.y,player.x,player.y);
+this.x += Math.cos(ang)*this.speed*dt;
+this.y += Math.sin(ang)*this.speed*dt;
+
+if(COLLISION.circle(this,player)){
+player.takeDamage(40*dt);
 }
 }
+
+takeDamage(d){
+this.hp -= d;
+showDamage(this.x,this.y,d);
+spawnExplosion(this.x,this.y,this.boss?"purple":"green");
+
+if(this.hp<=0){
+player.gainXP(this.boss?300:40);
+this.remove=true;
 }
-draw(){
+}
+
+render(ctx){
 ctx.fillStyle=this.boss?"purple":"green";
 ctx.beginPath();
 ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
 ctx.fill();
 }
 }
-let enemies=[];
 
-/* ================= WAVE ================= */
+/* =====================================================
+   WAVE DIRECTOR
+===================================================== */
 
 let wave=1;
-let spawn=10;
+let spawnCount=10;
 let spawnTimer=0;
 
-function nextWave(){
+function updateWave(dt){
+spawnTimer -= dt;
+
+if(spawnTimer<=0 && spawnCount>0){
+GAME.addEntity(new Enemy());
+spawnCount--;
+spawnTimer=1;
+}
+
+let enemiesAlive = GAME.entities.filter(e=>e instanceof Enemy).length;
+
+if(spawnCount<=0 && enemiesAlive===0){
 wave++;
-spawn=10+wave*4;
-if(wave%5===0)enemies.push(new Enemy(true));
+spawnCount = 10 + wave*4;
+
+if(wave%5===0){
+GAME.addEntity(new Enemy(true));
+}
+}
 }
 
-/* ================= UPGRADE ================= */
+/* =====================================================
+   PLAY STATE OVERRIDE
+===================================================== */
 
-function openUpgrade(){
-gameState="upgrade";
-overlay.style.display="flex";
-overlay.innerHTML="<h1>YÜKSELTME SEÇ</h1>";
-let ups=[
-{text:"+15 Hasar",f:()=>player.damage+=15},
-{text:"Ateş Hızı+",f:()=>player.fireRate*=0.85},
-{text:"+1 Kalp",f:()=>player.hearts++},
-{text:"+20 HP",f:()=>player.maxHp+=20}
-];
-ups.sort(()=>0.5-Math.random());
-ups.slice(0,3).forEach(u=>{
-let b=document.createElement("button");
-b.textContent=u.text;
-b.onclick=()=>{
-u.f();
-player.upgrades.push(u.text);
-overlay.style.display="none";
-gameState="play";
+let player;
+
+PlayState.enter = function(){
+GAME.entities=[];
+player = new Player();
+GAME.addEntity(player);
 };
-overlay.appendChild(b);
-});
-}
 
-/* ================= GAME STATES ================= */
+PlayState.update = function(dt){
+CAMERA.update(dt);
+GAME.updateEntities(dt);
+updateWave(dt);
+};
 
-function gameOver(){
-gameState="gameover";
-overlay.style.display="flex";
-overlay.innerHTML="<h1>OYUN BİTTİ</h1><button onclick='restart()'>Yeniden Başla</button>";
-}
-
-function restart(){
-player.reset();
-wave=1;
-spawn=10;
-enemies=[];
-bullets=[];
-gameState="play";
-overlay.style.display="none";
-}
-
-/* ================= MENU ================= */
-
-overlay.innerHTML=`
-<h1>ARENA SURVIVOR</h1>
-<p>WASD ile hareket</p>
-<p>Mouse ile ateş</p>
-<p>Her 5 wave Boss</p>
-<button onclick="start()">BAŞLA</button>
-`;
-
-function start(){
-overlay.style.display="none";
-gameState="play";
-}
-
-/* ================= LOOP ================= */
-
-function loop(t){
-dt=(t-last)/1000;
-last=t;
-
-if(gameState==="play"){
-player.update(dt);
-
-spawnTimer-=dt;
-if(spawnTimer<=0 && spawn>0){
-enemies.push(new Enemy());
-spawn--;
-spawnTimer=1.2;
-}
-if(spawn<=0 && enemies.length===0)nextWave();
-
-bullets.forEach((b,bi)=>{
-b.update(dt);
-enemies.forEach((e,ei)=>{
-if(Math.hypot(b.x-e.x,b.y-e.y)<e.r){
-e.hp-=b.dmg;
-bullets.splice(bi,1);
-screenShake=5;
-if(e.hp<=0){
-player.gainXP(e.boss?300:40);
-enemies.splice(ei,1);
-}
-}
-});
-});
-}
-
-draw();
-requestAnimationFrame(loop);
-}
-
-function draw(){
+PlayState.render = function(ctx){
 ctx.save();
-if(screenShake>0){
-ctx.translate((Math.random()-0.5)*screenShake,(Math.random()-0.5)*screenShake);
-screenShake*=0.9;
-}
-ctx.clearRect(0,0,WIDTH,HEIGHT);
-
-bullets.forEach(b=>b.draw());
-enemies.forEach(e=>e.draw());
-player.draw();
+CAMERA.apply(ctx);
+GAME.renderEntities(ctx);
+ctx.restore();
 
 /* HUD */
 ctx.fillStyle="red";
@@ -332,25 +633,669 @@ ctx.fillRect(10+i*30,10,20,20);
 }
 
 ctx.fillStyle="purple";
-ctx.fillRect(200,660,800*(player.xp/player.xpNeed),20);
+ctx.fillRect(200,680,800*(player.xp/player.xpNeed),15);
 
 ctx.fillStyle="white";
-ctx.fillText("Wave: "+wave,560,30);
+ctx.fillText("Wave: "+wave,600,30);
+ctx.fillText("Level: "+player.level,600,50);
+};
 
-ctx.restore();
+/* =====================================================
+   GAME OVER STATE
+===================================================== */
 
-upgradePanel.innerHTML="<b>Yükseltmeler</b><br>"+player.upgrades.join("<br>");
-statsPanel.innerHTML=`
-<b>İstatistik</b><br>
-Hasar: ${player.damage}<br>
-Ateş Hızı: ${(1/player.fireRate).toFixed(1)}<br>
-Max HP: ${player.maxHp}<br>
-Kalp: ${player.hearts}
-`;
+const GameOverState = {
+enter(){},
+update(dt){
+if(INPUT.mouse.down){
+GAME.stateManager.change("PLAY");
+}
+},
+render(ctx){
+ctx.fillStyle="white";
+ctx.textAlign="center";
+ctx.font="48px Arial";
+ctx.fillText("OYUN BİTTİ",GAME.width/2,300);
+ctx.font="20px Arial";
+ctx.fillText("Yeniden başlamak için tıkla",GAME.width/2,350);
+}
+};
+
+GAME.stateManager.add("GAMEOVER",GameOverState);
+/* =====================================================
+   WEAPON SYSTEM
+===================================================== */
+
+class Weapon {
+constructor(config){
+this.name = config.name;
+this.fireRate = config.fireRate;
+this.damage = config.damage;
+this.spread = config.spread || 0;
+this.bulletCount = config.bulletCount || 1;
+this.magSize = config.magSize || Infinity;
+this.reloadTime = config.reloadTime || 0;
+this.critChance = config.critChance || 0.1;
+this.critMult = config.critMult || 2;
+
+this.currentAmmo = this.magSize;
+this.reloadTimer = 0;
+this.fireTimer = 0;
 }
 
-requestAnimationFrame(loop);
+update(dt){
+this.fireTimer -= dt;
 
+if(this.reloadTimer>0){
+this.reloadTimer -= dt;
+if(this.reloadTimer<=0){
+this.currentAmmo = this.magSize;
+}
+}
+}
+
+tryShoot(owner){
+if(this.reloadTimer>0) return;
+if(this.fireTimer>0) return;
+
+if(this.currentAmmo<=0){
+this.reload();
+return;
+}
+
+this.fireTimer = this.fireRate;
+this.currentAmmo--;
+
+for(let i=0;i<this.bulletCount;i++){
+let ang = UTIL.angle(owner.x,owner.y,INPUT.mouse.x,INPUT.mouse.y);
+ang += UTIL.rand(-this.spread,this.spread);
+
+let dx = Math.cos(ang);
+let dy = Math.sin(ang);
+
+let dmg = this.damage;
+if(Math.random()<this.critChance){
+dmg *= this.critMult;
+}
+
+GAME.addEntity(new Bullet(owner.x,owner.y,dx,dy,dmg));
+}
+}
+
+reload(){
+if(this.magSize===Infinity) return;
+this.reloadTimer = this.reloadTime;
+}
+}
+
+/* =====================================================
+   WEAPON LIST
+===================================================== */
+
+const WEAPONS = {
+pistol: new Weapon({
+name:"Pistol",
+fireRate:0.35,
+damage:25,
+magSize:12,
+reloadTime:1.2,
+critChance:0.15
+}),
+shotgun: new Weapon({
+name:"Shotgun",
+fireRate:0.8,
+damage:18,
+bulletCount:6,
+spread:0.3,
+magSize:6,
+reloadTime:2
+}),
+sniper: new Weapon({
+name:"Sniper",
+fireRate:1.2,
+damage:120,
+magSize:5,
+reloadTime:2.5,
+critChance:0.25,
+critMult:3
+}),
+minigun: new Weapon({
+name:"Minigun",
+fireRate:0.08,
+damage:12,
+magSize:100,
+reloadTime:3,
+spread:0.15
+})
+};
+
+/* =====================================================
+   PLAYER WEAPON EXTEND
+===================================================== */
+
+Player.prototype.initWeapon = function(){
+this.weapon = WEAPONS.pistol;
+};
+
+Player.prototype.updateWeapon = function(dt){
+this.weapon.update(dt);
+
+if(INPUT.mouse.down){
+this.weapon.tryShoot(this);
+}
+};
+
+/* override update */
+
+const oldPlayerUpdate = Player.prototype.update;
+Player.prototype.update = function(dt){
+oldPlayerUpdate.call(this,dt);
+this.updateWeapon(dt);
+};
+
+/* =====================================================
+   UPGRADE SYSTEM
+===================================================== */
+
+let upgradeChoices = [];
+let upgradeActive = false;
+
+const UPGRADE_POOL = [
+{ name:"Hasar +10", apply: p=>p.weapon.damage+=10 },
+{ name:"Fire Rate +20%", apply: p=>p.weapon.fireRate*=0.8 },
+{ name:"Crit +10%", apply: p=>p.weapon.critChance+=0.1 },
+{ name:"Max HP +20", apply: p=>p.maxHp+=20 },
+{ name:"Heal Full", apply: p=>p.hp=p.maxHp },
+{ name:"Shotgun Aç", apply: p=>p.weapon=WEAPONS.shotgun },
+{ name:"Sniper Aç", apply: p=>p.weapon=WEAPONS.sniper },
+{ name:"Minigun Aç", apply: p=>p.weapon=WEAPONS.minigun }
+];
+
+function openUpgrade(){
+upgradeActive = true;
+upgradeChoices = [];
+
+for(let i=0;i<3;i++){
+upgradeChoices.push(
+UPGRADE_POOL[Math.floor(Math.random()*UPGRADE_POOL.length)]
+);
+}
+}
+
+function renderUpgrade(ctx){
+ctx.fillStyle="rgba(0,0,0,0.7)";
+ctx.fillRect(0,0,GAME.width,GAME.height);
+
+ctx.fillStyle="white";
+ctx.font="30px Arial";
+ctx.textAlign="center";
+ctx.fillText("YÜKSELTME SEÇ",GAME.width/2,150);
+
+ctx.font="22px Arial";
+
+for(let i=0;i<3;i++){
+ctx.fillRect(GAME.width/2-200,250+i*120,400,80);
+ctx.fillStyle="black";
+ctx.fillText(upgradeChoices[i].name,GAME.width/2,300+i*120);
+ctx.fillStyle="white";
+}
+}
+
+function checkUpgradeClick(){
+if(!upgradeActive) return;
+
+let mx = INPUT.mouse.x;
+let my = INPUT.mouse.y;
+
+for(let i=0;i<3;i++){
+let x = GAME.width/2-200;
+let y = 250+i*120;
+
+if(mx>x && mx<x+400 && my>y && my<y+80){
+upgradeChoices[i].apply(player);
+upgradeActive=false;
+}
+}
+}
+
+/* =====================================================
+   XP HOOK
+===================================================== */
+
+const oldGainXP = Player.prototype.gainXP;
+Player.prototype.gainXP = function(v){
+oldGainXP.call(this,v);
+
+if(this.xp===0){
+openUpgrade();
+}
+};
+
+/* =====================================================
+   PLAY STATE EXTEND
+===================================================== */
+
+const oldPlayUpdate = PlayState.update;
+PlayState.update = function(dt){
+if(upgradeActive){
+if(INPUT.mouse.down){
+checkUpgradeClick();
+}
+return;
+}
+
+oldPlayUpdate.call(this,dt);
+};
+
+const oldPlayRender = PlayState.render;
+PlayState.render = function(ctx){
+oldPlayRender.call(this,ctx);
+
+ctx.fillStyle="white";
+ctx.fillText("Silah: "+player.weapon.name,20,60);
+
+if(player.weapon.magSize!==Infinity){
+ctx.fillText(
+"Ammo: "+player.weapon.currentAmmo+"/"+player.weapon.magSize,
+20,80
+);
+}
+
+if(player.weapon.reloadTimer>0){
+ctx.fillText("Reloading...",20,100);
+}
+
+if(upgradeActive){
+renderUpgrade(ctx);
+}
+};
+
+/* =====================================================
+   PLAYER INIT FIX
+===================================================== */
+
+const oldEnter = PlayState.enter;
+PlayState.enter = function(){
+oldEnter.call(this);
+player.initWeapon();
+};
+/* =====================================================
+   TRUE BOSS SYSTEM
+===================================================== */
+
+class TrueBoss extends Enemy{
+constructor(){
+super(true);
+this.r = 70;
+this.maxHp = 4000;
+this.hp = this.maxHp;
+this.phase = 1;
+this.attackTimer = 0;
+this.speed = 80;
+this.name = "VOID TITAN";
+}
+
+update(dt){
+let hpPercent = this.hp / this.maxHp;
+
+/* PHASE SWITCH */
+if(hpPercent < 0.66) this.phase = 2;
+if(hpPercent < 0.33) this.phase = 3;
+
+this.attackTimer -= dt;
+
+/* MOVEMENT */
+let ang = UTIL.angle(this.x,this.y,player.x,player.y);
+this.x += Math.cos(ang)*this.speed*dt;
+this.y += Math.sin(ang)*this.speed*dt;
+
+/* ATTACK PATTERNS */
+if(this.attackTimer<=0){
+if(this.phase===1){
+this.radialShot(12,200);
+this.attackTimer = 2;
+}
+else if(this.phase===2){
+this.radialShot(24,300);
+this.dashAttack();
+this.attackTimer = 1.5;
+}
+else if(this.phase===3){
+this.radialShot(36,350);
+this.spawnMinions();
+CAMERA.shakePower=20;
+this.attackTimer = 1.2;
+}
+}
+
+if(COLLISION.circle(this,player)){
+player.takeDamage(60*dt);
+}
+}
+
+radialShot(count,speed){
+for(let i=0;i<count;i++){
+let angle = (Math.PI*2/count)*i;
+GAME.addEntity(new EnemyBullet(
+this.x,this.y,
+Math.cos(angle)*speed,
+Math.sin(angle)*speed
+));
+}
+}
+
+dashAttack(){
+let ang = UTIL.angle(this.x,this.y,player.x,player.y);
+this.x += Math.cos(ang)*200;
+this.y += Math.sin(ang)*200;
+}
+
+spawnMinions(){
+for(let i=0;i<4;i++){
+GAME.addEntity(new Enemy());
+}
+}
+
+takeDamage(d){
+super.takeDamage(d);
+if(this.hp<=0){
+bossActive=false;
+spawnExplosion(this.x,this.y,"red");
+}
+}
+
+render(ctx){
+ctx.fillStyle="darkred";
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+/* =====================================================
+   ENEMY BULLET
+===================================================== */
+
+class EnemyBullet extends Entity{
+constructor(x,y,vx,vy){
+super(x,y,6);
+this.vx=vx;
+this.vy=vy;
+}
+
+update(dt){
+super.update(dt);
+
+if(this.x<0||this.x>GAME.width||this.y<0||this.y>GAME.height){
+this.remove=true;
+}
+
+if(COLLISION.circle(this,player)){
+player.takeDamage(25);
+this.remove=true;
+}
+}
+
+render(ctx){
+ctx.fillStyle="orange";
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+/* =====================================================
+   BOSS DIRECTOR
+===================================================== */
+
+let bossActive=false;
+
+function spawnTrueBoss(){
+bossActive=true;
+GAME.addEntity(new TrueBoss());
+}
+
+/* Modify wave logic */
+
+const oldWaveUpdate = updateWave;
+updateWave = function(dt){
+oldWaveUpdate(dt);
+
+if(wave>0 && wave%7===0 && !bossActive){
+spawnTrueBoss();
+}
+};
+
+/* =====================================================
+   BOSS HP BAR
+===================================================== */
+
+function renderBossBar(ctx){
+let boss = GAME.entities.find(e=>e instanceof TrueBoss);
+if(!boss) return;
+
+let percent = boss.hp / boss.maxHp;
+
+ctx.fillStyle="black";
+ctx.fillRect(200,20,1000,30);
+
+ctx.fillStyle="red";
+ctx.fillRect(200,20,1000*percent,30);
+
+ctx.strokeStyle="white";
+ctx.strokeRect(200,20,1000,30);
+
+ctx.fillStyle="white";
+ctx.textAlign="center";
+ctx.fillText(boss.name,700,15);
+}
+
+/* extend render */
+
+const oldRender2 = PlayState.render;
+PlayState.render = function(ctx){
+oldRender2.call(this,ctx);
+
+if(bossActive){
+renderBossBar(ctx);
+}
+};
+/* =====================================================
+   META SAVE SYSTEM
+===================================================== */
+
+let META = {
+gold: 0,
+permaDamage: 0,
+permaHp: 0,
+permaCrit: 0,
+musicVolume: 0.5,
+sfxVolume: 0.7
+};
+
+function saveGame(){
+localStorage.setItem("vox_meta",JSON.stringify(META));
+}
+
+function loadGame(){
+let data = localStorage.getItem("vox_meta");
+if(data){
+META = JSON.parse(data);
+}
+}
+loadGame();
+
+/* =====================================================
+   GOLD DROP
+===================================================== */
+
+class Gold extends Entity{
+constructor(x,y){
+super(x,y,8);
+this.value = 5;
+}
+
+update(dt){
+if(COLLISION.circle(this,player)){
+META.gold += this.value;
+saveGame();
+this.remove=true;
+}
+}
+
+render(ctx){
+ctx.fillStyle="yellow";
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+/* Enemy drop override */
+
+const oldEnemyDeath = Enemy.prototype.takeDamage;
+Enemy.prototype.takeDamage = function(d){
+oldEnemyDeath.call(this,d);
+if(this.hp<=0){
+GAME.addEntity(new Gold(this.x,this.y));
+}
+};
+
+/* =====================================================
+   APPLY META TO PLAYER
+===================================================== */
+
+const oldEnterMeta = PlayState.enter;
+PlayState.enter = function(){
+oldEnterMeta.call(this);
+
+player.maxHp += META.permaHp;
+player.hp = player.maxHp;
+
+player.weapon.damage += META.permaDamage;
+player.weapon.critChance += META.permaCrit;
+};
+
+/* =====================================================
+   MAIN MENU STATE
+===================================================== */
+
+class MenuState{
+enter(){}
+
+update(dt){
+if(INPUT.keys["Enter"]){
+GAME.setState(new PlayState());
+}
+if(INPUT.keys["KeyS"]){
+GAME.setState(new SkillTreeState());
+}
+}
+
+render(ctx){
+ctx.fillStyle="black";
+ctx.fillRect(0,0,GAME.width,GAME.height);
+
+ctx.fillStyle="white";
+ctx.textAlign="center";
+ctx.font="50px Arial";
+ctx.fillText("VOX ARENA",GAME.width/2,200);
+
+ctx.font="25px Arial";
+ctx.fillText("ENTER - OYNA",GAME.width/2,350);
+ctx.fillText("S - SKILL TREE",GAME.width/2,400);
+ctx.fillText("Gold: "+META.gold,GAME.width/2,450);
+}
+}
+
+/* =====================================================
+   SKILL TREE STATE
+===================================================== */
+
+class SkillTreeState{
+update(dt){
+if(INPUT.keys["Escape"]){
+GAME.setState(new MenuState());
+}
+}
+
+render(ctx){
+ctx.fillStyle="black";
+ctx.fillRect(0,0,GAME.width,GAME.height);
+
+ctx.fillStyle="white";
+ctx.textAlign="center";
+ctx.font="40px Arial";
+ctx.fillText("SKILL TREE",GAME.width/2,150);
+
+ctx.font="25px Arial";
+
+ctx.fillText("1 - Damage +5 (50 Gold)",GAME.width/2,300);
+ctx.fillText("2 - HP +20 (50 Gold)",GAME.width/2,350);
+ctx.fillText("3 - Crit +5% (50 Gold)",GAME.width/2,400);
+ctx.fillText("ESC - Geri",GAME.width/2,500);
+
+if(INPUT.keys["Digit1"] && META.gold>=50){
+META.gold-=50;
+META.permaDamage+=5;
+saveGame();
+}
+
+if(INPUT.keys["Digit2"] && META.gold>=50){
+META.gold-=50;
+META.permaHp+=20;
+saveGame();
+}
+
+if(INPUT.keys["Digit3"] && META.gold>=50){
+META.gold-=50;
+META.permaCrit+=0.05;
+saveGame();
+}
+}
+}
+
+/* =====================================================
+   SIMPLE AUDIO SYSTEM
+===================================================== */
+
+let shootSound = new Audio();
+shootSound.src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAABErAAACABAAZGF0YQAAAAA=";
+
+function playShoot(){
+shootSound.volume = META.sfxVolume;
+shootSound.currentTime=0;
+shootSound.play();
+}
+
+/* hook weapon shoot */
+
+const oldTryShoot = Weapon.prototype.tryShoot;
+Weapon.prototype.tryShoot = function(owner){
+oldTryShoot.call(this,owner);
+playShoot();
+};
+
+/* =====================================================
+   SETTINGS HOTKEYS
+===================================================== */
+
+document.addEventListener("keydown",e=>{
+if(e.code==="Minus"){
+META.musicVolume = Math.max(0,META.musicVolume-0.1);
+saveGame();
+}
+if(e.code==="Equal"){
+META.musicVolume = Math.min(1,META.musicVolume+0.1);
+saveGame();
+}
+});
+
+/* =====================================================
+   START GAME INTO MENU
+===================================================== */
+
+GAME.setState(new MenuState());
 </script>
 </body>
 </html>
