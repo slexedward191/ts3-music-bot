@@ -2,237 +2,295 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Derby Tycoon: Pro Edition</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;900&family=Oswald:wght@700&display=swap" rel="stylesheet">
+    <title>Derby Tycoon: Ultimate Evolution</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Poppins:wght@300;600;900&display=swap" rel="stylesheet">
     <style>
-        :root { --grass: #27ae60; --dirt: #e67e22; --gold: #f1c40f; --ui-bg: rgba(0,0,0,0.85); }
-        body, html { margin: 0; padding: 0; overflow: hidden; background: #2c3e50; font-family: 'Montserrat', sans-serif; }
+        :root {
+            --primary: #f1c40f;
+            --secondary: #2ecc71;
+            --danger: #e74c3c;
+            --dark: #121212;
+            --surface: #1e1e1e;
+        }
+
+        body, html { 
+            margin: 0; padding: 0; overflow: hidden; 
+            background: var(--dark); font-family: 'Poppins', sans-serif; color: #fff;
+        }
+
+        /* --- UI OVERLAY --- */
+        #ui-layer { position: absolute; inset: 0; pointer-events: none; z-index: 100; }
+        .pointer { pointer-events: all; }
+
+        /* Üst Bar */
+        .top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 40px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+        .currency { font-size: 24px; font-weight: 900; color: var(--primary); text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
+
+        /* Ana Menü / Ahır */
+        .main-menu {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 800px; background: var(--surface); border-radius: 20px;
+            padding: 40px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .stable-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        .horse-stats { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; }
         
-        /* UI Katmanları */
-        #game-ui { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
-        .panel { background: var(--ui-bg); border: 2px solid var(--gold); padding: 20px; pointer-events: all; border-radius: 12px; }
-        
-        /* Bahis Ekranı */
-        #betting-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 600px; text-align: center; }
-        .horse-option { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; border-radius: 8px; transition: 0.3s; cursor: pointer; }
-        .horse-option:hover { background: var(--gold); color: #000; }
-        .horse-option.selected { border: 2px solid var(--gold); background: rgba(241, 196, 15, 0.3); }
+        .stat-row { margin: 10px 0; }
+        .stat-label { font-size: 12px; color: #aaa; text-transform: uppercase; }
+        .progress-bg { height: 8px; background: #333; border-radius: 4px; margin-top: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); transition: 0.5s; }
 
-        /* Yarış İçi HUD */
-        #hud { position: absolute; top: 20px; left: 20px; display: flex; gap: 20px; }
-        .stat-box { background: var(--ui-bg); color: #fff; padding: 10px 20px; border-radius: 30px; border: 1px solid var(--gold); }
+        /* Market */
+        .shop-box { display: flex; gap: 10px; margin-top: 20px; }
+        .shop-item {
+            flex: 1; background: #252525; padding: 15px; border-radius: 10px; text-align: center;
+            border: 1px solid transparent; transition: 0.3s; cursor: pointer;
+        }
+        .shop-item:hover { border-color: var(--primary); background: #2a2a2a; }
 
-        /* Atlar ve Pist */
-        #track-container { position: relative; width: 100%; height: 100vh; background: var(--grass); overflow: hidden; display: none; }
-        .finish-line { position: absolute; right: 100px; top: 0; bottom: 0; width: 40px; background: repeating-linear-gradient(45deg, #fff, #fff 10px, #000 10px, #000 20px); border-left: 5px solid #ff0000; }
+        /* Yarış Ekranı */
+        #race-track {
+            position: fixed; inset: 0; background: #1a4a1a; display: none;
+            background-image: repeating-linear-gradient(90deg, transparent, transparent 100px, rgba(255,255,255,0.02) 100px, rgba(255,255,255,0.02) 200px);
+        }
+        .lane { height: 80px; border-bottom: 2px solid rgba(255,255,255,0.1); position: relative; }
+        .horse-sprite {
+            position: absolute; left: 0; top: 10px; width: 80px; height: 60px;
+            background-size: contain; transition: left 0.1s linear;
+        }
+        .horse-name-tag {
+            position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+            font-size: 10px; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 10px; white-space: nowrap;
+        }
 
-        .btn { background: var(--gold); border: none; padding: 10px 30px; font-weight: 900; cursor: pointer; text-transform: uppercase; border-radius: 5px; font-family: 'Oswald'; }
-        .btn:disabled { background: #555; cursor: not-allowed; }
+        /* Butonlar */
+        .btn {
+            background: var(--primary); color: #000; border: none; padding: 12px 30px;
+            border-radius: 8px; font-family: 'Oswald'; font-weight: 700; font-size: 18px;
+            cursor: pointer; transition: 0.2s; text-transform: uppercase;
+        }
+        .btn:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--primary); }
+        .btn-upgrade { background: var(--secondary); font-size: 12px; padding: 5px 10px; margin-top: 5px; }
 
-        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<div id="game-ui">
-    <div id="betting-panel" class="panel">
-        <h1 style="color: var(--gold); font-family: 'Oswald'; font-size: 40px; margin: 0 0 20px 0;">GAZİ KOŞUSU SIMULATOR</h1>
-        <div id="balance-display" style="color: #fff; font-size: 24px; margin-bottom: 20px;">Bakiyeniz: 🪙<span id="player-money">1000</span></div>
-        <div id="horse-list"></div>
-        <div style="margin-top: 20px;">
-            <input type="number" id="bet-amount" value="100" min="10" style="padding: 10px; border-radius: 5px; border: none; width: 100px;">
-            <button class="btn" id="start-race-btn" onclick="Game.startRace()">YARIŞI BAŞLAT</button>
+<div id="ui-layer">
+    <div class="top-bar">
+        <div class="currency">🪙 <span id="gold-val">1000</span></div>
+        <div style="font-family: 'Oswald'; letter-spacing: 2px;">DERBY TYCOON V2.0</div>
+    </div>
+
+    <div id="main-menu" class="main-menu pointer">
+        <h1 style="margin: 0; font-weight: 900; font-size: 32px;">AHIRINIZ</h1>
+        <p style="color: #888; margin-bottom: 30px;">Atını eğit, ekipman al ve şampiyon ol.</p>
+
+        <div class="stable-grid">
+            <div class="horse-stats">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="font-weight: bold; color: var(--primary);">BEYGİR X</span>
+                    <span id="horse-lvl">LVL 1</span>
+                </div>
+                
+                <div class="stat-row">
+                    <div class="stat-label">MAX HIZ</div>
+                    <div class="progress-bg"><div id="speed-bar" class="progress-fill" style="width: 30%;"></div></div>
+                    <button class="btn btn-upgrade pointer" onclick="Game.upgrade('speed')">GELİŞTİR (250 🪙)</button>
+                </div>
+
+                <div class="stat-row">
+                    <div class="stat-label">DAYANIKLILIK</div>
+                    <div class="progress-bg"><div id="stam-bar" class="progress-fill" style="width: 40%;"></div></div>
+                    <button class="btn btn-upgrade pointer" onclick="Game.upgrade('stamina')">GELİŞTİR (300 🪙)</button>
+                </div>
+            </div>
+
+            <div class="horse-stats">
+                <div class="stat-label">BİLGİ</div>
+                <p style="font-size: 13px; color: #ccc;">Atınız şu anki formuyla orta ölçekli yarışlara hazır. Hız geliştirmesi finiş sprintini etkiler.</p>
+                <div class="shop-item pointer" style="background: var(--danger);" onclick="Game.startRace()">
+                    <div style="font-weight: 900;">YARIŞA KATIL</div>
+                    <div style="font-size: 10px;">Giriş Ücreti: 100 🪙</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="hud">
-        <div class="stat-box">KOŞU: <span id="race-status">BEKLENİYOR</span></div>
-        <div class="stat-box">BAKİYE: 🪙<span id="hud-money">1000</span></div>
+    <div id="race-hud" class="hidden" style="position: absolute; bottom: 40px; width: 100%; text-align: center;">
+        <div style="font-size: 24px; font-weight: 900; color: #fff; text-shadow: 2px 2px #000;">
+            FINISH ÇİZGİSİNE KALAN: <span id="dist-val">1000</span>m
+        </div>
     </div>
 </div>
 
-<div id="track-container">
-    <div class="finish-line"></div>
-    <div id="horses-layer"></div>
-</div>
+<div id="race-track">
+    </div>
 
-<div id="result-screen">
-    <h1 id="result-title" style="font-size: 60px; color: var(--gold);">1. ŞAHBATUR!</h1>
-    <p id="payout-info" style="font-size: 30px; color: #fff;"></p>
-    <button class="btn" onclick="Game.reset()">YENİ YARIŞ</button>
+<div id="result-screen" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <h1 id="result-text" style="font-size: 64px; color: var(--primary);">TEBRİKLER! 1. OLDUN</h1>
+    <p id="reward-text" style="font-size: 24px;">Kazancın: 500 🪙</p>
+    <button class="btn pointer" onclick="Game.backToMenu()">AHIRA DÖN</button>
 </div>
 
 <script>
 /**
- * DERBY ENGINE PRO
+ * DERBY TYCOON: PROFESSIONAL ENGINE
  */
 const Game = {
-    money: 1000,
-    selectedHorse: null,
-    betAmount: 0,
-    horses: [
-        { id: 0, name: "Şahbatur", color: "#e74c3c", speed: 0.8, stamina: 0.9, odds: 2.1 },
-        { id: 1, name: "Bold Pilot", color: "#3498db", speed: 0.95, stamina: 0.7, odds: 1.8 },
-        { id: 2, name: "Gülbatur", color: "#9b59b6", speed: 0.7, stamina: 0.95, odds: 3.5 },
-        { id: 3, name: "Yelkenli", color: "#f1c40f", speed: 0.85, stamina: 0.8, odds: 2.5 },
-        { id: 4, name: "Karayel", color: "#2ecc71", speed: 0.75, stamina: 0.85, odds: 3.0 }
-    ],
-    horseElements: [],
+    gold: 1000,
+    horse: {
+        lvl: 1,
+        speed: 30,
+        stamina: 40,
+        currentPos: 0
+    },
+    rivals: [],
     isRacing: false,
+    trackLength: 5000,
 
     init() {
-        const list = document.getElementById('horse-list');
-        this.horses.forEach(h => {
-            const div = document.createElement('div');
-            div.className = 'horse-option';
-            div.innerHTML = `
-                <div style="display:flex; align-items:center;">
-                    <div style="width:20px; height:20px; background:${h.color}; margin-right:15px; border-radius:50%;"></div>
-                    <strong>${h.name}</strong>
-                </div>
-                <span>Çarpan: x${h.odds} | Hız: %${h.speed*100}</span>
-            `;
-            div.onclick = () => this.selectHorse(h.id, div);
-            list.appendChild(div);
-        });
+        this.updateUI();
     },
 
-    selectHorse(id, el) {
-        this.selectedHorse = id;
-        document.querySelectorAll('.horse-option').forEach(x => x.classList.remove('selected'));
-        el.classList.add('selected');
+    upgrade(type) {
+        let cost = type === 'speed' ? 250 : 300;
+        if(this.gold >= cost && this.horse[type] < 100) {
+            this.gold -= cost;
+            this.horse[type] += 10;
+            this.updateUI();
+            this.playSFX(440, 'sine', 0.2);
+        } else {
+            alert("Yetersiz bakiye veya max seviye!");
+        }
     },
 
     startRace() {
-        this.betAmount = parseInt(document.getElementById('bet-amount').value);
-        if(this.selectedHorse === null || this.betAmount > this.money || this.betAmount <= 0) {
-            alert("Lütfen geçerli bir bahis yapın!");
-            return;
-        }
-
-        this.money -= this.betAmount;
-        this.updateUI();
-        document.getElementById('betting-panel').style.display = 'none';
-        document.getElementById('track-container').style.display = 'block';
-        this.prepareTrack();
+        if(this.gold < 100) return;
+        this.gold -= 100;
+        
         this.isRacing = true;
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('race-track').classList.remove('hidden');
+        document.getElementById('race-track').style.display = 'block';
+        document.getElementById('race-hud').classList.remove('hidden');
+
+        this.prepareTrack();
         this.raceLoop();
     },
 
     prepareTrack() {
-        const layer = document.getElementById('horses-layer');
-        layer.innerHTML = '';
-        this.horseElements = [];
-        
-        const trackHeight = window.innerHeight / this.horses.length;
+        const track = document.getElementById('race-track');
+        track.innerHTML = '';
+        this.rivals = [];
+        this.horse.currentPos = 0;
 
-        this.horses.forEach((h, i) => {
+        // 5 Kulvar oluştur (1 Oyuncu + 4 Bot)
+        for(let i=0; i<5; i++) {
             const lane = document.createElement('div');
-            lane.style.position = 'absolute';
-            lane.style.top = (i * trackHeight) + 'px';
-            lane.style.width = '100%';
-            lane.style.height = trackHeight + 'px';
-            lane.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
-            lane.style.background = i % 2 === 0 ? 'rgba(0,0,0,0.05)' : 'transparent';
+            lane.className = 'lane';
             
             const horse = document.createElement('div');
-            horse.style.position = 'absolute';
-            horse.style.left = '20px';
-            horse.style.top = (trackHeight/2 - 20) + 'px';
-            horse.style.width = '60px';
-            horse.style.height = '40px';
-            horse.style.background = h.color;
+            horse.className = 'horse-sprite';
+            horse.style.backgroundColor = i === 0 ? 'var(--primary)' : '#555';
             horse.style.borderRadius = '5px';
-            horse.style.display = 'flex';
-            horse.style.alignItems = 'center';
-            horse.style.justifyContent = 'center';
-            horse.style.fontWeight = 'bold';
-            horse.style.color = '#fff';
-            horse.style.fontSize = '12px';
-            horse.innerText = h.name.substring(0,2).toUpperCase();
-            horse.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
-
-            lane.appendChild(horse);
-            layer.appendChild(lane);
+            horse.innerHTML = `<div class="horse-name-tag">${i === 0 ? 'SİZİN ATINIZ' : 'RAKİP '+i}</div>`;
             
-            this.horseElements.push({
-                id: h.id,
-                el: horse,
-                pos: 20,
-                speedBase: h.speed,
-                stamina: h.stamina,
-                currentSpeed: 0
-            });
-        });
+            lane.appendChild(horse);
+            track.appendChild(lane);
+
+            if(i === 0) {
+                this.playerEl = horse;
+            } else {
+                this.rivals.push({
+                    el: horse,
+                    pos: 0,
+                    speed: 25 + Math.random() * 15,
+                    drift: Math.random() * 2
+                });
+            }
+        }
     },
 
     raceLoop() {
         if(!this.isRacing) return;
 
-        let winner = null;
-        const finishLine = window.innerWidth - 150;
+        // Oyuncu Hareketi (Stamina ve Hız kombinasyonu)
+        const playerSpeed = (this.horse.speed / 5) + (Math.random() * 2);
+        this.horse.currentPos += playerSpeed;
+        
+        // Ekran Kaydırma (Atı hep görünür kılmak için yüzde kullanıyoruz)
+        const screenWidth = window.innerWidth - 100;
+        const playerVisualPos = (this.horse.currentPos / this.trackLength) * screenWidth;
+        this.playerEl.style.left = playerVisualPos + 'px';
 
-        this.horseElements.forEach(h => {
-            // İleri matematiksel hız simülasyonu (rastgelelik + stamina etkisi)
-            const noise = Math.random() * 2;
-            const staminaEffect = (1 - (h.pos / finishLine)) * h.stamina;
-            h.currentSpeed = (h.speedBase * 5) + noise + staminaEffect;
-            
-            h.pos += h.currentSpeed;
-            h.el.style.left = h.pos + 'px';
-
-            // Kazanan kontrolü
-            if(h.pos >= finishLine && !winner) {
-                winner = this.horses.find(x => x.id === h.id);
-            }
+        // Rakip Hareketleri
+        this.rivals.forEach(rival => {
+            rival.pos += (rival.speed / 5) + (Math.random() * 2);
+            rival.el.style.left = (rival.pos / this.trackLength) * screenWidth + 'px';
         });
 
-        if(winner) {
-            this.isRacing = false;
-            this.finishRace(winner);
+        // Kalan Mesafe
+        const remaining = Math.max(0, Math.floor(this.trackLength - this.horse.currentPos));
+        document.getElementById('dist-val').innerText = remaining;
+
+        // Bitiş Kontrolü
+        if(this.horse.currentPos >= this.trackLength) {
+            this.endRace(true);
+        } else if (this.rivals.some(r => r.pos >= this.trackLength)) {
+            this.endRace(false);
         } else {
             requestAnimationFrame(() => this.raceLoop());
         }
     },
 
-    finishRace(winner) {
-        setTimeout(() => {
-            const screen = document.getElementById('result-screen');
-            const title = document.getElementById('result-title');
-            const info = document.getElementById('payout-info');
-            
-            screen.style.display = 'flex';
-            title.innerText = `1. ${winner.name.toUpperCase()}!`;
-            
-            if(winner.id === this.selectedHorse) {
-                const winAmount = Math.floor(this.betAmount * winner.odds);
-                this.money += winAmount;
-                title.style.color = "#2ecc71";
-                info.innerText = `TEBRİKLER! 🪙${winAmount} kazandınız.`;
-            } else {
-                title.style.color = "#e74c3c";
-                info.innerText = `KAYBETTİNİZ! Bahis yattı.`;
-            }
-            this.updateUI();
-        }, 1000);
+    endRace(isWinner) {
+        this.isRacing = false;
+        const screen = document.getElementById('result-screen');
+        const txt = document.getElementById('result-text');
+        const reward = document.getElementById('reward-text');
+
+        screen.classList.remove('hidden');
+        if(isWinner) {
+            txt.innerText = "ŞAMPİYON!";
+            txt.style.color = "var(--secondary)";
+            this.gold += 500;
+            reward.innerText = "Kazancın: 500 🪙";
+        } else {
+            txt.innerText = "KAYBETTİN!";
+            txt.style.color = "var(--danger)";
+            reward.innerText = "Dereceye giremedin.";
+        }
+        this.updateUI();
     },
 
-    reset() {
-        document.getElementById('result-screen').style.display = 'none';
-        document.getElementById('track-container').style.display = 'none';
-        document.getElementById('betting-panel').style.display = 'block';
-        this.selectedHorse = null;
-        document.querySelectorAll('.horse-option').forEach(x => x.classList.remove('selected'));
-        if(this.money < 10) {
-            alert("İflas ettiniz! Kaptan size 500 kredi hibe etti.");
-            this.money = 500;
-            this.updateUI();
-        }
+    backToMenu() {
+        document.getElementById('result-screen').classList.add('hidden');
+        document.getElementById('race-track').style.display = 'none';
+        document.getElementById('race-hud').classList.add('hidden');
+        document.getElementById('main-menu').classList.remove('hidden');
     },
 
     updateUI() {
-        document.getElementById('player-money').innerText = this.money;
-        document.getElementById('hud-money').innerText = this.money;
+        document.getElementById('gold-val').innerText = this.gold;
+        document.getElementById('speed-bar').style.width = this.horse.speed + '%';
+        document.getElementById('stam-bar').style.width = this.horse.stamina + '%';
+        document.getElementById('horse-lvl').innerText = `LVL ${Math.floor((this.horse.speed + this.horse.stamina)/10)}`;
+    },
+
+    playSFX(freq, type, dur) {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + dur);
     }
 };
 
