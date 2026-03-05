@@ -2,452 +2,240 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Naval Reborn: Golden Age</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Roboto:wght@400;900&display=swap" rel="stylesheet">
+    <title>Derby Tycoon: Pro Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;900&family=Oswald:wght@700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --gold: #ffcc00;
-            --ocean-dark: #002d4d;
-            --ocean-light: #0077be;
-            --danger: #ff4757;
-            --ui-bg: rgba(10, 20, 30, 0.85);
-        }
+        :root { --grass: #27ae60; --dirt: #e67e22; --gold: #f1c40f; --ui-bg: rgba(0,0,0,0.85); }
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #2c3e50; font-family: 'Montserrat', sans-serif; }
+        
+        /* UI Katmanları */
+        #game-ui { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+        .panel { background: var(--ui-bg); border: 2px solid var(--gold); padding: 20px; pointer-events: all; border-radius: 12px; }
+        
+        /* Bahis Ekranı */
+        #betting-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 600px; text-align: center; }
+        .horse-option { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; border-radius: 8px; transition: 0.3s; cursor: pointer; }
+        .horse-option:hover { background: var(--gold); color: #000; }
+        .horse-option.selected { border: 2px solid var(--gold); background: rgba(241, 196, 15, 0.3); }
 
-        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Roboto', sans-serif; }
-        canvas { display: block; filter: contrast(110%) brightness(105%); }
+        /* Yarış İçi HUD */
+        #hud { position: absolute; top: 20px; left: 20px; display: flex; gap: 20px; }
+        .stat-box { background: var(--ui-bg); color: #fff; padding: 10px 20px; border-radius: 30px; border: 1px solid var(--gold); }
 
-        /* --- PROFESYONEL UI KATMANLARI --- */
-        #hud {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 10;
-        }
+        /* Atlar ve Pist */
+        #track-container { position: relative; width: 100%; height: 100vh; background: var(--grass); overflow: hidden; display: none; }
+        .finish-line { position: absolute; right: 100px; top: 0; bottom: 0; width: 40px; background: repeating-linear-gradient(45deg, #fff, #fff 10px, #000 10px, #000 20px); border-left: 5px solid #ff0000; }
 
-        /* Sol Üst: Oyuncu Durumu */
-        .player-card {
-            position: absolute;
-            top: 20px; left: 20px;
-            background: var(--ui-bg);
-            padding: 15px;
-            border-left: 5px solid var(--gold);
-            min-width: 250px;
-            backdrop-filter: blur(10px);
-            pointer-events: all;
-        }
+        .btn { background: var(--gold); border: none; padding: 10px 30px; font-weight: 900; cursor: pointer; text-transform: uppercase; border-radius: 5px; font-family: 'Oswald'; }
+        .btn:disabled { background: #555; cursor: not-allowed; }
 
-        .bar-outer { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 5px; overflow: hidden; }
-        .bar-inner { height: 100%; width: 100%; transition: width 0.3s ease-out; }
-        #hp-bar { background: linear-gradient(90deg, #ff4757, #ff6b81); }
-        #xp-bar { background: linear-gradient(90deg, var(--gold), #ffa502); width: 0%; }
-
-        /* Sağ Üst: Leaderboard & Zaman */
-        .leaderboard {
-            position: absolute;
-            top: 20px; right: 20px;
-            background: var(--ui-bg);
-            padding: 10px;
-            width: 180px;
-            font-size: 14px;
-        }
-        .leaderboard h4 { margin: 0 0 10px 0; color: var(--gold); border-bottom: 1px solid #333; }
-
-        /* Sağ Alt: Mini Harita */
-        #mini-map {
-            position: absolute;
-            bottom: 20px; right: 20px;
-            width: 150px; height: 150px;
-            background: rgba(0,0,0,0.5);
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-        }
-
-        /* Orta Bildirimler */
-        #announcer {
-            position: absolute;
-            top: 30%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: 'Pirata One';
-            font-size: 60px;
-            color: var(--danger);
-            text-shadow: 0 0 20px rgba(0,0,0,0.8);
-            opacity: 0;
-            transition: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-        }
-
-        /* Giriş Paneli */
-        #overlay {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle, #004d7a 0%, #000 100%);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .start-box {
-            background: var(--ui-bg);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            border: 1px solid var(--gold);
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-        }
-
-        input {
-            background: #000;
-            border: 2px solid var(--gold);
-            padding: 12px;
-            color: #fff;
-            font-size: 18px;
-            border-radius: 8px;
-            width: 250px;
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            background: var(--gold);
-            color: #000;
-            border: none;
-            padding: 15px 40px;
-            font-weight: 900;
-            cursor: pointer;
-            border-radius: 8px;
-            text-transform: uppercase;
-            transition: 0.2s;
-        }
-        .btn:hover { transform: translateY(-3px); box-shadow: 0 5px 15px var(--gold); }
-
-        /* Market */
-        #shop-trigger {
-            position: absolute;
-            top: 130px; left: 20px;
-            pointer-events: all;
-            display: none;
-        }
+        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
     </style>
 </head>
 <body>
 
-<div id="overlay">
-    <h1 style="font-family: 'Pirata One'; font-size: 80px; color: var(--gold); margin: 0;">NAVAL REBORN</h1>
-    <p style="color: #aaa; margin-bottom: 30px;">Denizlerin Hakimi Olmaya Hazır Mısın?</p>
-    <div class="start-box">
-        <input type="text" id="username" placeholder="KAPTAN İSMİ" maxlength="15">
-        <br>
-        <button class="btn" onclick="Game.start()">DENİZE AÇIL</button>
+<div id="game-ui">
+    <div id="betting-panel" class="panel">
+        <h1 style="color: var(--gold); font-family: 'Oswald'; font-size: 40px; margin: 0 0 20px 0;">GAZİ KOŞUSU SIMULATOR</h1>
+        <div id="balance-display" style="color: #fff; font-size: 24px; margin-bottom: 20px;">Bakiyeniz: 🪙<span id="player-money">1000</span></div>
+        <div id="horse-list"></div>
+        <div style="margin-top: 20px;">
+            <input type="number" id="bet-amount" value="100" min="10" style="padding: 10px; border-radius: 5px; border: none; width: 100px;">
+            <button class="btn" id="start-race-btn" onclick="Game.startRace()">YARIŞI BAŞLAT</button>
+        </div>
+    </div>
+
+    <div id="hud">
+        <div class="stat-box">KOŞU: <span id="race-status">BEKLENİYOR</span></div>
+        <div class="stat-box">BAKİYE: 🪙<span id="hud-money">1000</span></div>
     </div>
 </div>
 
-<div id="hud">
-    <div class="player-card">
-        <div id="ui-name" style="font-weight: 900; color: var(--gold);">Kaptan</div>
-        <div style="font-size: 11px; margin-top: 5px;">GEMİ SAĞLIĞI</div>
-        <div class="bar-outer"><div id="hp-bar" class="bar-inner"></div></div>
-        <div style="font-size: 11px; margin-top: 5px;">TECRÜBE (LVL <span id="ui-lvl">1</span>)</div>
-        <div class="bar-outer"><div id="xp-bar" class="bar-inner"></div></div>
-        <div style="margin-top: 10px; font-weight: 900; color: #fff;">🪙 <span id="ui-gold">0</span></div>
-    </div>
-
-    <div class="leaderboard">
-        <h4>EN İYİLER</h4>
-        <div id="lb-list">1. Korsan Kralı<br>2. Siyah İnci</div>
-    </div>
-
-    <div id="shop-trigger">
-        <button class="btn" style="padding: 10px 20px; font-size: 12px; background: #2ecc71;" onclick="Game.openShop()">MARKETİ AÇ [E]</button>
-    </div>
-
-    <canvas id="mini-map"></canvas>
-    <div id="announcer">ADANIZA SALDIRI!</div>
+<div id="track-container">
+    <div class="finish-line"></div>
+    <div id="horses-layer"></div>
 </div>
 
-<canvas id="mainCanvas"></canvas>
+<div id="result-screen">
+    <h1 id="result-title" style="font-size: 60px; color: var(--gold);">1. ŞAHBATUR!</h1>
+    <p id="payout-info" style="font-size: 30px; color: #fff;"></p>
+    <button class="btn" onclick="Game.reset()">YENİ YARIŞ</button>
+</div>
 
 <script>
 /**
- * NAVAL REBORN: ENGINE CORE
- * Bu bölüm oyunun fizik, render ve logic motorunu içerir.
+ * DERBY ENGINE PRO
  */
-
 const Game = {
-    canvas: document.getElementById('mainCanvas'),
-    ctx: null,
-    width: window.innerWidth,
-    height: window.innerHeight,
-    worldSize: 5000, // Devasa dünya
-    camera: { x: 0, y: 0, zoom: 1 },
-    player: null,
-    entities: [],
-    particles: [],
-    bullets: [],
-    input: { w: false, a: false, s: false, d: false, mouseX: 0, mouseY: 0, mouseDown: false },
-    time: 0,
-    isDay: true,
-    gold: 0,
-    islandHp: 5000000,
+    money: 1000,
+    selectedHorse: null,
+    betAmount: 0,
+    horses: [
+        { id: 0, name: "Şahbatur", color: "#e74c3c", speed: 0.8, stamina: 0.9, odds: 2.1 },
+        { id: 1, name: "Bold Pilot", color: "#3498db", speed: 0.95, stamina: 0.7, odds: 1.8 },
+        { id: 2, name: "Gülbatur", color: "#9b59b6", speed: 0.7, stamina: 0.95, odds: 3.5 },
+        { id: 3, name: "Yelkenli", color: "#f1c40f", speed: 0.85, stamina: 0.8, odds: 2.5 },
+        { id: 4, name: "Karayel", color: "#2ecc71", speed: 0.75, stamina: 0.85, odds: 3.0 }
+    ],
+    horseElements: [],
+    isRacing: false,
 
-    async init() {
-        this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        this.ctx.imageSmoothingEnabled = true;
-
-        window.addEventListener('keydown', e => this.input[e.key.toLowerCase()] = true);
-        window.addEventListener('keyup', e => this.input[e.key.toLowerCase()] = false);
-        window.addEventListener('mousemove', e => {
-            this.input.mouseX = e.clientX;
-            this.input.mouseY = e.clientY;
-        });
-        window.addEventListener('mousedown', () => this.input.mouseDown = true);
-        window.addEventListener('mouseup', () => this.input.mouseDown = false);
-        window.addEventListener('resize', () => {
-            this.width = this.canvas.width = window.innerWidth;
-            this.height = this.canvas.height = window.innerHeight;
+    init() {
+        const list = document.getElementById('horse-list');
+        this.horses.forEach(h => {
+            const div = document.createElement('div');
+            div.className = 'horse-option';
+            div.innerHTML = `
+                <div style="display:flex; align-items:center;">
+                    <div style="width:20px; height:20px; background:${h.color}; margin-right:15px; border-radius:50%;"></div>
+                    <strong>${h.name}</strong>
+                </div>
+                <span>Çarpan: x${h.odds} | Hız: %${h.speed*100}</span>
+            `;
+            div.onclick = () => this.selectHorse(h.id, div);
+            list.appendChild(div);
         });
     },
 
-    start() {
-        const name = document.getElementById('username').value || "Kaptan";
-        document.getElementById('ui-name').innerText = name;
-        document.getElementById('overlay').style.display = 'none';
-        
-        this.player = new Player(this.worldSize / 2, this.worldSize / 2, name);
-        this.generateWorld();
-        this.loop();
+    selectHorse(id, el) {
+        this.selectedHorse = id;
+        document.querySelectorAll('.horse-option').forEach(x => x.classList.remove('selected'));
+        el.classList.add('selected');
     },
 
-    generateWorld() {
-        // Canavarlar ve Adalar
-        for(let i=0; i<100; i++) {
-            this.entities.push(new Entity('monster', Math.random()*this.worldSize, Math.random()*this.worldSize));
+    startRace() {
+        this.betAmount = parseInt(document.getElementById('bet-amount').value);
+        if(this.selectedHorse === null || this.betAmount > this.money || this.betAmount <= 0) {
+            alert("Lütfen geçerli bir bahis yapın!");
+            return;
         }
-        // Market Adası (Sabit)
-        this.entities.push(new Entity('shop_island', 400, 400));
-        // Oyuncu Adası (Sabit)
-        this.entities.push(new Entity('player_island', this.worldSize - 600, this.worldSize - 600));
+
+        this.money -= this.betAmount;
+        this.updateUI();
+        document.getElementById('betting-panel').style.display = 'none';
+        document.getElementById('track-container').style.display = 'block';
+        this.prepareTrack();
+        this.isRacing = true;
+        this.raceLoop();
     },
 
-    loop() {
-        this.update();
-        this.draw();
-        requestAnimationFrame(() => this.loop());
-    },
-
-    update() {
-        this.time += 0.01;
-        this.isDay = (Math.sin(this.time * 0.2) > -0.3);
-
-        this.player.update();
+    prepareTrack() {
+        const layer = document.getElementById('horses-layer');
+        layer.innerHTML = '';
+        this.horseElements = [];
         
-        // Kamera takibi
-        this.camera.x += (this.player.x - this.width/2 - this.camera.x) * 0.1;
-        this.camera.y += (this.player.y - this.height/2 - this.camera.y) * 0.1;
+        const trackHeight = window.innerHeight / this.horses.length;
 
-        // Varlıklar
-        this.entities.forEach((en, index) => {
-            en.update();
-            // Çarpışma: Oyuncu mermisi vs Düşman
-            this.bullets.forEach((b, bi) => {
-                if(Math.hypot(b.x - en.x, b.y - en.y) < en.size) {
-                    en.hp -= this.player.stats.dmg;
-                    this.bullets.splice(bi, 1);
-                    if(en.hp <= 0) {
-                        this.gold += en.reward;
-                        this.player.xp += 25;
-                        this.entities.splice(index, 1);
-                        if(en.type === 'monster') {
-                            setTimeout(() => this.entities.push(new Entity('monster', Math.random()*this.worldSize, Math.random()*this.worldSize)), 5000);
-                        }
-                    }
-                }
+        this.horses.forEach((h, i) => {
+            const lane = document.createElement('div');
+            lane.style.position = 'absolute';
+            lane.style.top = (i * trackHeight) + 'px';
+            lane.style.width = '100%';
+            lane.style.height = trackHeight + 'px';
+            lane.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+            lane.style.background = i % 2 === 0 ? 'rgba(0,0,0,0.05)' : 'transparent';
+            
+            const horse = document.createElement('div');
+            horse.style.position = 'absolute';
+            horse.style.left = '20px';
+            horse.style.top = (trackHeight/2 - 20) + 'px';
+            horse.style.width = '60px';
+            horse.style.height = '40px';
+            horse.style.background = h.color;
+            horse.style.borderRadius = '5px';
+            horse.style.display = 'flex';
+            horse.style.alignItems = 'center';
+            horse.style.justifyContent = 'center';
+            horse.style.fontWeight = 'bold';
+            horse.style.color = '#fff';
+            horse.style.fontSize = '12px';
+            horse.innerText = h.name.substring(0,2).toUpperCase();
+            horse.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
+
+            lane.appendChild(horse);
+            layer.appendChild(lane);
+            
+            this.horseElements.push({
+                id: h.id,
+                el: horse,
+                pos: 20,
+                speedBase: h.speed,
+                stamina: h.stamina,
+                currentSpeed: 0
             });
         });
-
-        this.bullets.forEach((b, i) => {
-            b.x += b.vx; b.y += b.vy;
-            b.life--;
-            if(b.life <= 0) this.bullets.splice(i, 1);
-        });
-
-        // UI Sync
-        document.getElementById('ui-gold').innerText = Math.floor(this.gold);
-        document.getElementById('hp-bar').style.width = (this.player.hp / this.player.maxHp * 100) + '%';
-        document.getElementById('xp-bar').style.width = (this.player.xp % 100) + '%';
-        document.getElementById('ui-lvl').innerText = Math.floor(this.player.xp / 100) + 1;
     },
 
-    draw() {
-        const ctx = this.ctx;
-        ctx.clearRect(0,0,this.width, this.height);
+    raceLoop() {
+        if(!this.isRacing) return;
 
-        ctx.save();
-        ctx.translate(-this.camera.x, -this.camera.y);
+        let winner = null;
+        const finishLine = window.innerWidth - 150;
 
-        // Okyanus Çizimi (Sonsuz Izgara)
-        this.drawOcean();
+        this.horseElements.forEach(h => {
+            // İleri matematiksel hız simülasyonu (rastgelelik + stamina etkisi)
+            const noise = Math.random() * 2;
+            const staminaEffect = (1 - (h.pos / finishLine)) * h.stamina;
+            h.currentSpeed = (h.speedBase * 5) + noise + staminaEffect;
+            
+            h.pos += h.currentSpeed;
+            h.el.style.left = h.pos + 'px';
 
-        // Varlıklar
-        this.entities.forEach(en => en.draw(ctx));
-        this.bullets.forEach(b => {
-            ctx.fillStyle = "#fff";
-            ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+            // Kazanan kontrolü
+            if(h.pos >= finishLine && !winner) {
+                winner = this.horses.find(x => x.id === h.id);
+            }
         });
 
-        this.player.draw(ctx);
-
-        ctx.restore();
-
-        // Gece Efekti (Overlay)
-        if(!this.isDay) {
-            ctx.fillStyle = 'rgba(0, 5, 20, 0.4)';
-            ctx.fillRect(0,0,this.width, this.height);
+        if(winner) {
+            this.isRacing = false;
+            this.finishRace(winner);
+        } else {
+            requestAnimationFrame(() => this.raceLoop());
         }
-
-        this.drawMiniMap();
     },
 
-    drawOcean() {
-        const ctx = this.ctx;
-        const spacing = 100;
-        const startX = Math.floor(this.camera.x / spacing) * spacing;
-        const startY = Math.floor(this.camera.y / spacing) * spacing;
-
-        ctx.strokeStyle = this.isDay ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)';
-        ctx.beginPath();
-        for(let x = startX; x < startX + this.width + spacing; x += spacing) {
-            ctx.moveTo(x, this.camera.y); ctx.lineTo(x, this.camera.y + this.height);
-        }
-        for(let y = startY; y < startY + this.height + spacing; y += spacing) {
-            ctx.moveTo(this.camera.x, y); ctx.lineTo(this.camera.x + this.width, y);
-        }
-        ctx.stroke();
+    finishRace(winner) {
+        setTimeout(() => {
+            const screen = document.getElementById('result-screen');
+            const title = document.getElementById('result-title');
+            const info = document.getElementById('payout-info');
+            
+            screen.style.display = 'flex';
+            title.innerText = `1. ${winner.name.toUpperCase()}!`;
+            
+            if(winner.id === this.selectedHorse) {
+                const winAmount = Math.floor(this.betAmount * winner.odds);
+                this.money += winAmount;
+                title.style.color = "#2ecc71";
+                info.innerText = `TEBRİKLER! 🪙${winAmount} kazandınız.`;
+            } else {
+                title.style.color = "#e74c3c";
+                info.innerText = `KAYBETTİNİZ! Bahis yattı.`;
+            }
+            this.updateUI();
+        }, 1000);
     },
 
-    drawMiniMap() {
-        const mc = document.getElementById('mini-map');
-        const mctx = mc.getContext('2d');
-        mc.width = 150; mc.height = 150;
-        mctx.fillStyle = "rgba(0,40,80,0.5)";
-        mctx.fillRect(0,0,150,150);
+    reset() {
+        document.getElementById('result-screen').style.display = 'none';
+        document.getElementById('track-container').style.display = 'none';
+        document.getElementById('betting-panel').style.display = 'block';
+        this.selectedHorse = null;
+        document.querySelectorAll('.horse-option').forEach(x => x.classList.remove('selected'));
+        if(this.money < 10) {
+            alert("İflas ettiniz! Kaptan size 500 kredi hibe etti.");
+            this.money = 500;
+            this.updateUI();
+        }
+    },
 
-        const r = 150 / this.worldSize;
-        mctx.fillStyle = varGold;
-        mctx.fillRect(this.player.x * r - 2, this.player.y * r - 2, 4, 4);
-        
-        mctx.fillStyle = "red";
-        this.entities.forEach(en => {
-            if(en.type === 'monster') mctx.fillRect(en.x * r, en.y * r, 2, 2);
-        });
+    updateUI() {
+        document.getElementById('player-money').innerText = this.money;
+        document.getElementById('hud-money').innerText = this.money;
     }
 };
 
-/**
- * ENTITY & PLAYER CLASSES
- */
-
-class Player {
-    constructor(x, y, name) {
-        this.x = x; this.y = y; this.name = name;
-        this.angle = 0; this.speed = 4;
-        this.hp = 1000; this.maxHp = 1000;
-        this.xp = 0;
-        this.stats = { dmg: 50, fireRate: 20 };
-        this.lastShot = 0;
-    }
-
-    update() {
-        let mx = 0, my = 0;
-        if(Game.input.w) my -= this.speed;
-        if(Game.input.s) my += this.speed;
-        if(Game.input.a) mx -= this.speed;
-        if(Game.input.d) mx += this.speed;
-
-        this.x += mx; this.y += my;
-        this.angle = Math.atan2(Game.input.mouseY - (this.y - Game.camera.y), Game.input.mouseX - (this.x - Game.camera.x));
-
-        if(Game.input.mouseDown && Game.time * 100 - this.lastShot > this.stats.fireRate) {
-            this.shoot();
-            this.lastShot = Game.time * 100;
-        }
-    }
-
-    shoot() {
-        Game.bullets.push({
-            x: this.x, y: this.y, 
-            vx: Math.cos(this.angle) * 12, 
-            vy: Math.sin(this.angle) * 12,
-            life: 100
-        });
-    }
-
-    draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle);
-        
-        // Gemi Tasarımı
-        ctx.fillStyle = '#5d4037';
-        ctx.beginPath();
-        ctx.moveTo(30, 0); ctx.lineTo(-20, -15); ctx.lineTo(-20, 15); ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(-10, -2, 5, 4); // Yelken direği
-        
-        ctx.restore();
-        
-        // İsim etiketi
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 14px Roboto";
-        ctx.textAlign = "center";
-        ctx.fillText(this.name, this.x, this.y - 30);
-    }
-}
-
-class Entity {
-    constructor(type, x, y) {
-        this.type = type; this.x = x; this.y = y;
-        this.hp = 200; this.size = 30;
-        this.reward = 100;
-        this.color = type === 'monster' ? '#ff4757' : '#2ecc71';
-        this.wobble = Math.random() * Math.PI;
-    }
-
-    update() {
-        if(this.type === 'monster') {
-            this.wobble += 0.05;
-            this.x += Math.cos(this.wobble) * 0.5;
-            this.y += Math.sin(this.wobble) * 0.5;
-        }
-    }
-
-    draw(ctx) {
-        ctx.save();
-        if(this.type === 'monster') {
-            ctx.fillStyle = this.color;
-            ctx.shadowBlur = 15; ctx.shadowColor = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size + Math.sin(this.wobble)*5, 0, Math.PI*2);
-            ctx.fill();
-        } else if(this.type === 'shop_island') {
-            ctx.fillStyle = "#f1c40f";
-            ctx.beginPath(); ctx.arc(this.x, this.y, 150, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#000"; ctx.fillText("MARKET ADASI", this.x, this.y);
-        } else if(this.type === 'player_island') {
-            ctx.fillStyle = "#2ecc71";
-            ctx.beginPath(); ctx.arc(this.x, this.y, 200, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.fillText("SİZİN ADANIZ", this.x, this.y);
-        }
-        ctx.restore();
-    }
-}
-
-const varGold = "#ffcc00";
-
-// Başlat
 Game.init();
 </script>
 </body>
