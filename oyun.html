@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameArea Fight - Final Balance Fix</title>
+    <title>GameArea Fight - Moving Death Aura</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap');
 
@@ -28,8 +28,8 @@
 
         #game-container {
             position: relative;
-            width: 1050px;
-            height: 650px;
+            width: 1250px; 
+            height: 800px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -37,11 +37,11 @@
 
         #arena-wrapper {
             position: relative;
-            width: 1050px;
-            height: 650px;
+            width: 1250px;
+            height: 800px;
             border: 10px solid;
             border-image: linear-gradient(90deg, var(--neon-red) 50%, #ffffff 50%) 1;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.4);
             background: #111;
             overflow: hidden;
             z-index: 5;
@@ -58,8 +58,9 @@
             box-shadow: 0 0 10px var(--neon-blue);
             z-index: 10;
         }
+
         #stats-panel { bottom: -50px; left: -160px; width: 140px; color: var(--neon-blue); }
-        #xp-log { right: -160px; top: 50%; transform: translateY(-50%); width: 140px; max-height: 250px; overflow: hidden; border-color: var(--neon-purple); }
+        #xp-log { right: -160px; top: 50%; transform: translateY(-50%); width: 140px; max-height: 300px; overflow: hidden; border-color: var(--neon-purple); }
         #gold-display { top: -50px; left: 0; color: var(--neon-gold); font-weight: bold; border-color: var(--neon-gold); }
 
         #market-btn {
@@ -73,10 +74,8 @@
             border-radius: 5px;
             cursor: pointer;
             box-shadow: 0 0 15px var(--neon-gold);
-            transition: 0.3s;
             z-index: 20;
         }
-        #market-btn:hover { transform: scale(1.1); }
 
         .overlay {
             position: absolute;
@@ -95,7 +94,6 @@
             border: 3px solid var(--neon-purple);
             text-align: center;
             width: 350px;
-            box-shadow: 0 0 20px var(--neon-purple);
         }
         .auth-box input {
             width: 80%;
@@ -106,7 +104,6 @@
             color: white;
             font-family: 'Orbitron';
         }
-        .warning { color: var(--neon-red); font-size: 10px; margin-top: 10px; }
 
         .market-grid {
             display: grid;
@@ -122,14 +119,6 @@
             width: 180px;
         }
         .char-card.selected { border-color: var(--neon-gold); box-shadow: 0 0 15px var(--neon-gold); }
-        .buy-btn {
-            background: var(--neon-gold);
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 10px;
-        }
 
         .btn-gif {
             width: 180px;
@@ -152,7 +141,7 @@
             top: 40%;
             width: 100%;
             text-align: center;
-            font-size: 4rem;
+            font-size: 5rem;
             color: var(--neon-red);
             font-weight: bold;
             display: none;
@@ -161,11 +150,11 @@
 
         #xp-bar-container {
             position: absolute;
-            bottom: 20px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
-            width: 75%;
-            height: 14px;
+            width: 80%;
+            height: 16px;
             background: #fff;
             border: 2px solid #000;
             z-index: 5;
@@ -187,8 +176,8 @@
 
 <div id="game-container">
     <div id="arena-wrapper">
-        <div id="bg-title" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:55px; opacity:0.15; white-space:nowrap; pointer-events:none; z-index:1">⚔️ GameArea Fight ⚔️</div>
-        <canvas id="gameCanvas" width="1050" height="650"></canvas>
+        <div id="bg-title" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:65px; opacity:0.12; white-space:nowrap; pointer-events:none; z-index:1">⚔️ GameArea Fight ⚔️</div>
+        <canvas id="gameCanvas" width="1250" height="800"></canvas>
         <div id="announcement">DALGA 1</div>
         <div id="xp-bar-container"><div id="xp-bar-fill"></div></div>
         <div id="cooldown-display">BEKLEME SÜRESİ: <span id="cooldown-timer">15</span>s</div>
@@ -214,12 +203,11 @@
                 <button onclick="handleAuth('login')" style="background:var(--neon-purple); border:none; color:white; padding:10px; cursor:pointer;">GİRİŞ</button>
                 <button onclick="handleAuth('guest')" style="background:gray; border:none; color:white; padding:10px; cursor:pointer;">MİSAFİR</button>
             </div>
-            <p class="warning">DİKKAT: Şifrenizi kaybederseniz hesabınıza asla ulaşamazsınız!</p>
         </div>
     </div>
 
     <div id="start-screen" class="overlay" style="display:none">
-        <h1 style="color: var(--neon-red); font-size: 50px;">GameArea Fight</h1>
+        <h1 style="color: var(--neon-red); font-size: 55px;">GameArea Fight</h1>
         <p id="welcome-msg" style="color:var(--neon-blue)"></p>
         <div class="btn-gif" onclick="startGame()">BAŞLAT</div>
     </div>
@@ -231,7 +219,7 @@
     </div>
 
     <div id="death-screen" class="overlay" style="display:none">
-        <h1 style="color: white;">ÖLDÜN!</h1>
+        <h1 style="color: white; font-size: 50px;">ÖLDÜN!</h1>
         <div class="btn-gif" onclick="resetGame()">RESTART</div>
     </div>
 
@@ -247,7 +235,7 @@
     
     let currentUser = null;
     let isGuest = false;
-    let animationId = null; // Döngü hatasını önlemek için
+    let animationId = null;
 
     const CHARS = [
         { id: 'std', name: 'Standart', hp: 100, armor: 0, price: 0, color: '#00f2ff' },
@@ -309,9 +297,8 @@
             div.innerHTML = `
                 <h4>${c.name}</h4>
                 <p>HP: ${c.hp} | Armor: +${c.armor}</p>
-                <p>${isOwned ? 'SAHİPSİN' : 'Fiyat: ' + c.price + ' Altın'}</p>
                 <button class="buy-btn" onclick="${isOwned ? `selectChar('${c.id}')` : `buyChar('${c.id}', ${c.price})`}">
-                    ${isSelected ? 'KULLANILIYOR' : (isOwned ? 'KULLAN' : 'SATIN AL')}
+                    ${isSelected ? 'KULLANILIYOR' : (isOwned ? 'KULLAN' : 'SATIN AL (' + c.price + ')')}
                 </button>
             `;
             grid.appendChild(div);
@@ -341,7 +328,7 @@
     function startGame() {
         const charData = CHARS.find(c => c.id === gameState.selectedChar);
         player = {
-            x: 525, y: 325, hp: charData.hp, maxHp: charData.hp, armor: charData.armor,
+            x: 625, y: 400, hp: charData.hp, maxHp: charData.hp, armor: charData.armor,
             speed: 3.5, dmg: 30, shootSpeed: 300, crit: 0, bounce: 0, upgrades: [], color: charData.color
         };
         enemies = []; bullets = []; particles = [];
@@ -351,7 +338,7 @@
         gameState.wave = 0;
         gameState.xp = 0;
         nextWave();
-        if(!animationId) loop(); // Sadece bir kez başlat
+        if(!animationId) loop();
     }
 
     function resetGame() {
@@ -386,9 +373,9 @@
         if (isBoss) {
             const count = Math.min(5, Math.floor(gameState.wave/5));
             const bossHp = (gameState.wave / 5) * 5000; 
-            for(let i=0; i<count; i++) enemies.push({ x: Math.random()*1000, y: -50, hp: bossHp, maxHp: bossHp, size: 70, speed: 1.1, boss: true, color: `hsl(${Math.random()*360}, 100%, 50%)` });
+            for(let i=0; i<count; i++) enemies.push({ x: Math.random()*1200 + 25, y: -50, hp: bossHp, maxHp: bossHp, size: 70, speed: 1.1, boss: true, color: `hsl(${Math.random()*360}, 100%, 50%)` });
         } else {
-            for(let i=0; i<gameState.wave*3.5; i++) enemies.push({ x: Math.random()*1050, y: Math.random() < 0.5 ? -30 : 680, hp: 250, maxHp: 250, size: 25, speed: 1.8 + Math.random(), boss: false, color: `hsl(${Math.random()*360}, 70%, 50%)` });
+            for(let i=0; i<gameState.wave*3.5; i++) enemies.push({ x: Math.random()*1250, y: Math.random() < 0.5 ? -30 : 830, hp: 250, maxHp: 250, size: 25, speed: 1.8 + Math.random(), boss: false, color: `hsl(${Math.random()*360}, 70%, 50%)` });
         }
     }
 
@@ -435,23 +422,23 @@
         const now = Date.now();
         if (now - lastAreaDamageTime < areaDamageCooldown) return;
         lastAreaDamageTime = now;
-        particles.push({ type: 'area', x: player.x, y: player.y, radius: 150, life: 1.0, color: '#00f2ff' });
-        enemies.forEach((e) => {
-            if (Math.hypot(e.x - player.x, e.y - player.y) < 150) {
-                e.hp -= 5;
-                if (e.hp <= 0) addXP(e.boss ? 14 : 7, "ALAN HASARI", e.boss);
-            }
+        // Alan artık sadece bir parçacık olarak ekleniyor
+        particles.push({ 
+            type: 'area', 
+            radius: 150, 
+            life: 1.0, 
+            color: '#00f2ff' 
         });
     }
 
     function loop() {
         if (!gameState.isRunning) { animationId = requestAnimationFrame(loop); return; }
-        ctx.clearRect(0,0,1050,650);
+        ctx.clearRect(0,0,1250,800);
 
         if (keys['KeyW'] && player.y > 20) player.y -= player.speed;
-        if (keys['KeyS'] && player.y < 630) player.y += player.speed;
+        if (keys['KeyS'] && player.y < 780) player.y += player.speed;
         if (keys['KeyA'] && player.x > 20) player.x -= player.speed;
-        if (keys['KeyD'] && player.x < 1030) player.x += player.speed;
+        if (keys['KeyD'] && player.x < 1230) player.x += player.speed;
 
         if (mousePressed && Date.now() - lastShot > player.shootSpeed) {
             const ang = Math.atan2(my - player.y, mx - player.x);
@@ -461,16 +448,46 @@
 
         bullets.forEach((b, i) => {
             b.x += b.vx; b.y += b.vy;
-            if (b.x<0 || b.x>1050 || b.y<0 || b.y>650) { if(b.b > 0){ b.vx*=-1; b.vy*=-1; b.b--; } else bullets.splice(i,1); }
+            if (b.x<0 || b.x>1250 || b.y<0 || b.y>800) { if(b.b > 0){ b.vx*=-1; b.vy*=-1; b.b--; } else bullets.splice(i,1); }
             ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill();
+        });
+
+        // PARÇACIKLAR (ALAN HASARI ARTIK BURADA İŞLENİYOR)
+        particles.forEach((p, i) => {
+            if(p.type === 'area') {
+                // Alan karakteri takip eder
+                ctx.save(); 
+                ctx.globalAlpha = p.life * 0.4; 
+                ctx.fillStyle = p.color;
+                ctx.beginPath(); 
+                ctx.arc(player.x, player.y, p.radius, 0, 7); 
+                ctx.fill(); 
+                ctx.restore();
+
+                // Düşmanlara Hasar Ver (Saniyede 60 FPS olduğu için canavarların içindeyken çok hızlı hasar alır)
+                enemies.forEach((e, ei) => {
+                    const dist = Math.hypot(e.x - player.x, e.y - player.y);
+                    if (dist < p.radius) {
+                        e.hp -= 0.84; // 50 / (60 * 1) saniye başına yaklaşık 50 hasar dengesi için (çok güçlü olmaması için ayarlandı)
+                        // Not: +50 direkt basıldığında verilmiyor, alan üstündeyken toplamda devasa hasar veriyor.
+                        // Eğer anlık 50 hasar istersen e.hp -= 50; yapabiliriz ama bu her karede 50 vurur (tek atar).
+                        
+                        if (e.hp <= 0) {
+                            addXP(e.boss ? 14 : 7, "AURA ÖLDÜRMESİ", e.boss);
+                            enemies.splice(ei, 1);
+                        }
+                    }
+                });
+
+                p.life -= (1 / (60 * 7.5)); 
+                if (p.life <= 0) particles.splice(i, 1);
+            }
         });
 
         enemies.forEach((e, i) => {
             const ang = Math.atan2(player.y - e.y, player.x - e.x);
             e.x += Math.cos(ang) * e.speed; e.y += Math.sin(ang) * e.speed;
             ctx.fillStyle = e.color; ctx.fillRect(e.x-e.size/2, e.y-e.size/2, e.size, e.size);
-            
-            // CAN BARI DÜZELTME
             ctx.fillStyle = "red"; ctx.fillRect(e.x-e.size/2, e.y-e.size/2-10, e.size, 5);
             ctx.fillStyle = "#00ff00"; ctx.fillRect(e.x-e.size/2, e.y-e.size/2-10, (e.hp/e.maxHp)*e.size, 5);
 
@@ -485,12 +502,6 @@
                 if(player.armor > 0) player.armor -= 0.5; else player.hp -= 0.5;
                 if(player.hp <= 0) { gameState.isRunning = false; document.getElementById('death-screen').style.display = 'flex'; }
             }
-        });
-
-        particles.forEach((p, i) => {
-            ctx.save(); ctx.globalAlpha = p.life * 0.4; ctx.fillStyle = p.color;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, 7); ctx.fill(); ctx.restore();
-            p.life -= (1 / (60 * 7.5)); if (p.life <= 0) particles.splice(i, 1);
         });
 
         const cdMs = areaDamageCooldown - (Date.now() - lastAreaDamageTime);
