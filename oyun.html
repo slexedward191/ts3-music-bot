@@ -2,75 +2,210 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Eternal Lordz MMORPG</title>
+    <title>Lordz RPG - Ultimate Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Cinzel', serif; color: white; }
+        body { margin: 0; overflow: hidden; background: #0e1a10; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
         
-        /* Gelişmiş Arayüz (HUD) */
-        #game-ui { position: absolute; inset: 0; pointer-events: none; }
-        
-        #top-bar { position: absolute; top: 20px; left: 20px; display: flex; gap: 20px; }
-        .stat-card { background: rgba(0,0,0,0.7); border: 2px solid #c9a227; padding: 10px 20px; border-radius: 5px; box-shadow: 0 0 15px rgba(201,162,39,0.3); }
+        #hud { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; }
+        .stat-box { background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 8px; border-left: 5px solid #f1c40f; margin-bottom: 10px; }
         
         #skill-bar { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
-            display: flex; gap: 15px; pointer-events: auto;
+            display: flex; gap: 15px; 
         }
         .skill {
-            width: 70px; height: 70px; background: #222; border: 3px solid #444; border-radius: 8px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: 0.2s; position: relative; overflow: hidden;
+            width: 60px; height: 60px; background: #222; border: 2px solid #555; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;
+            position: relative; overflow: hidden;
         }
-        .skill.ready { border-color: #3498db; box-shadow: 0 0 10px #3498db; cursor: pointer; }
-        .skill span { font-size: 24px; margin-bottom: 2px; }
-        .skill small { font-size: 10px; color: #aaa; }
-        .cd-overlay { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.6); transition: height 0.1s linear; }
+        .skill.active { border-color: #f1c40f; box-shadow: 0 0 15px #f1c40f; }
+        .cd-mask { position: absolute; top: 0; width: 100%; background: rgba(0,0,0,0.7); height: 0%; transition: height 0.1s linear; }
 
-        #level-up-notif {
-            position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 40px; color: #f1c40f; text-shadow: 0 0 20px gold;
-            opacity: 0; pointer-events: none; transition: 0.5s;
+        #death-screen {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: none;
+            flex-direction: column; align-items: center; justify-content: center; color: white;
         }
     </style>
 </head>
 <body>
 
-<div id="game-ui">
-    <div id="top-bar">
-        <div class="stat-card">
-            <div style="font-size: 12px; color: #f1c40f;">LEVEL</div>
-            <div id="lvl-val" style="font-size: 24px; font-weight: bold;">1</div>
+    <div id="hud">
+        <div class="stat-box">
+            <div>👑 SEVİYE: <span id="lvl">1</span></div>
+            <div style="font-size: 12px; color: #3498db;">XP: <span id="xp">0</span> / 100</div>
         </div>
-        <div class="stat-card">
-            <div style="font-size: 12px; color: #e74c3c;">HP</div>
-            <div id="hp-val" style="font-size: 24px; font-weight: bold;">100 / 100</div>
+        <div class="stat-box" style="border-left-color: #e74c3c;">
+            <div>❤️ CAN: <span id="hp">100</span></div>
+            <div>🛡️ ORDU: <span id="army">1</span></div>
         </div>
     </div>
 
-    <div id="level-up-notif">SEVİYE ATLADIN!</div>
+    <div id="death-screen">
+        <h1>YENİLDİN!</h1>
+        <p>Ordun dağıldı ama ruhun yaşıyor...</p>
+        <button onclick="respawn()" style="padding: 10px 30px; cursor: pointer; background: #f1c40f; border: none; font-weight: bold;">YENİDEN DOĞ</button>
+    </div>
 
     <div id="skill-bar">
-        <div class="skill" id="s1"><span>🔥</span><small>[1] Alev</small><div id="cd1" class="cd-overlay"></div></div>
-        <div class="skill" id="s2"><span>⚡</span><small>[2] Yıldırım</small><div id="cd2" class="cd-overlay"></div></div>
-        <div class="skill" id="s3"><span>❄️</span><small>[3] Buz</small><div id="cd3" class="cd-overlay"></div></div>
+        <div class="skill active">1<div id="cd1" class="cd-mask"></div></div>
+        <div class="skill active">2<div id="cd2" class="cd-mask"></div></div>
+        <div class="skill active">3<div id="cd3" class="cd-mask"></div></div>
     </div>
-</div>
 
-<canvas id="ctx"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
 <script>
-const canvas = document.getElementById('ctx');
-const gl = canvas.getContext('2d');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// --- OYUN AYARLARI ---
-let player = {
-    x: 0, y: 0, 
-    targetX: 0, targetY: 0,
-    hp: 100, maxHp: 100,
-    lvl: 1, xp: 0, nextXp: 100,
-    size: 30, color: '#3498db',
-    skills: {
-        1: {
+// --- OYUN DEĞİŞKENLERİ ---
+const WORLD_SIZE = 4000;
+let player, soldiers, mobs, particles, camera, mouse, pet, isDead;
+
+function init() {
+    isDead = false;
+    player = { x: WORLD_SIZE/2, y: WORLD_SIZE/2, hp: 100, maxHp: 100, lvl: 1, xp: 0, nextXp: 100, armySize: 0 };
+    soldiers = [];
+    mobs = [];
+    particles = [];
+    camera = { x: 0, y: 0 };
+    mouse = { x: 0, y: 0 };
+    pet = { x: player.x, y: player.y, angle: 0 };
+    
+    document.getElementById('death-screen').style.display = 'none';
+    
+    for(let i=0; i<50; i++) spawnMob();
+}
+
+function spawnMob() {
+    let isBoss = Math.random() > 0.9;
+    mobs.push({
+        x: Math.random() * WORLD_SIZE,
+        y: Math.random() * WORLD_SIZE,
+        hp: isBoss ? 500 : 60,
+        maxHp: isBoss ? 500 : 60,
+        size: isBoss ? 60 : 25,
+        isBoss: isBoss,
+        color: isBoss ? '#8e44ad' : '#c0392b'
+    });
+}
+
+function addSoldier() {
+    soldiers.push({ x: player.x, y: player.y, offset: Math.random() * Math.PI * 2, dist: 40 + Math.random() * 40 });
+}
+
+function respawn() { init(); }
+
+window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX + camera.x;
+    mouse.y = e.clientY + camera.y;
+});
+
+// Yetenek Kullanımı
+let cds = { 1: 0, 2: 0, 3: 0 };
+window.addEventListener('keydown', (e) => {
+    if (isDead) return;
+    if (e.key === '1' && cds[1] <= 0) { useSkill(150, '#f1c40f'); cds[1] = 100; }
+    if (e.key === '2' && cds[2] <= 0) { useSkill(300, '#3498db'); cds[2] = 200; }
+    if (e.key === '3' && cds[3] <= 0) { 
+        player.hp = Math.min(player.hp + 30, player.maxHp); // Heal Skill
+        createEffect(player.x, player.y, 100, '#2ecc71');
+        cds[3] = 400; 
+    }
+});
+
+function useSkill(range, color) {
+    createEffect(player.x, player.y, range, color);
+    mobs.forEach((m, i) => {
+        if (Math.hypot(player.x - m.x, player.y - m.y) < range) {
+            m.hp -= 50;
+            if (m.hp <= 0) killMob(i);
+        }
+    });
+}
+
+function killMob(index) {
+    let m = mobs[index];
+    player.xp += m.isBoss ? 150 : 40;
+    addSoldier();
+    mobs.splice(index, 1);
+    spawnMob();
+    checkLevel();
+}
+
+function checkLevel() {
+    if (player.xp >= player.nextXp) {
+        player.lvl++;
+        player.xp = 0;
+        player.nextXp *= 1.4;
+        player.maxHp += 30;
+        player.hp = player.maxHp;
+    }
+}
+
+function createEffect(x, y, r, c) {
+    particles.push({ x, y, r, c, life: 1 });
+}
+
+function update() {
+    if (isDead) return;
+
+    // Oyuncu Hareketi
+    let dx = mouse.x - player.x;
+    let dy = mouse.y - player.y;
+    if (Math.hypot(dx, dy) > 10) {
+        player.x += dx * 0.05;
+        player.y += dy * 0.05;
+    }
+
+    // Kamera Takibi
+    camera.x = player.x - canvas.width / 2;
+    camera.y = player.y - canvas.height / 2;
+
+    // Pet (Ejderha) Hareketi
+    pet.angle += 0.05;
+    pet.x = player.x + Math.cos(pet.angle) * 70;
+    pet.y = player.y + Math.sin(pet.angle) * 70;
+
+    // Askerler (Lordz.io Sistemi)
+    soldiers.forEach((s, i) => {
+        let targetX = player.x + Math.cos(pet.angle + s.offset) * s.dist;
+        let targetY = player.y + Math.sin(pet.angle + s.offset) * s.dist;
+        s.x = (s.x || player.x) + (targetX - (s.x || player.x)) * 0.1;
+        s.y = (s.y || player.y) + (targetY - (s.y || player.y)) * 0.1;
+    });
+
+    // Düşman Saldırısı ve Ölüm Kontrolü
+    mobs.forEach(m => {
+        let d = Math.hypot(player.x - m.x, player.y - m.y);
+        if (d < player.radius + m.size) {
+            player.hp -= 0.5;
+            if (player.hp <= 0) {
+                isDead = true;
+                document.getElementById('death-screen').style.display = 'flex';
+            }
+        }
+    });
+
+    // HUD ve Cooldown Update
+    document.getElementById('hp').innerText = Math.ceil(player.hp);
+    document.getElementById('lvl').innerText = player.lvl;
+    document.getElementById('xp').innerText = Math.floor(player.xp);
+    document.getElementById('army').innerText = soldiers.length + 1;
+    for(let i=1; i<=3; i++) {
+        if(cds[i] > 0) cds[i]--;
+        document.getElementById('cd'+i).style.height = (cds[i] / (i*100) * 100) + "%";
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
+
+    // Zemin
+    ctx.strokeStyle = '#152b18';
+    for(let i=0; i<=WORLD_SIZE;
