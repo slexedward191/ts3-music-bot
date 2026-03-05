@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameArea Fight - Kanka Dev Arena Fix</title>
+    <title>GameArea Fight - Pro Balance Fix</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap');
 
@@ -25,38 +25,35 @@
             overflow: hidden;
         }
 
-        /* Arena Kapsayıcı - Panelleri bunun dışına atacağız */
         #game-container {
             position: relative;
-            width: 1050px; /* Arena genişliği */
-            height: 650px; /* Arena yüksekliği */
+            width: 1050px;
+            height: 650px;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        /* Arena Duvarları - Değişmedi, sadece boyut arttı */
         #arena-wrapper {
             position: relative;
-            width: 1050px; /* GÜNCELLENDİ: Daha geniş */
-            height: 650px; /* GÜNCELLENDİ: Daha yüksek */
+            width: 1050px;
+            height: 650px;
             border: 10px solid;
             border-image: linear-gradient(90deg, var(--neon-red) 50%, #ffffff 50%) 1;
             box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
             background: #111;
             overflow: hidden;
-            z-index: 5; /* Paneller bunun dışında ama arkasında kalmasın */
+            z-index: 5;
         }
 
         canvas { display: block; }
 
-        /* Başlık ve Kılıçlar - Değişmedi, ortalı kalacak */
         #bg-title {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 55px; /* Biraz daha büyük */
+            font-size: 55px;
             opacity: 0.15;
             white-space: nowrap;
             pointer-events: none;
@@ -64,10 +61,9 @@
             z-index: 1;
         }
 
-        /* Arayüz Panelleri - KONUMLAR DIŞARIYA ALINDI */
         .ui-panel {
             position: absolute;
-            background: rgba(0, 0, 0, 0.85); /* Dışarıda olduğu için daha belirgin olsun */
+            background: rgba(0, 0, 0, 0.85);
             border: 2px solid var(--neon-blue);
             padding: 10px;
             border-radius: 8px;
@@ -75,33 +71,15 @@
             z-index: 10;
         }
 
-        /* Stats Paneli - Sol Alt Dış Köşede */
-        #stats-panel { 
-            bottom: -50px; /* Arenanın hemen altında */
-            left: -160px; /* Arenanın sol duvarının dışında */
-            width: 140px; 
-            color: var(--neon-blue); 
-        }
+        #stats-panel { bottom: -50px; left: -160px; width: 140px; color: var(--neon-blue); }
+        #xp-log { right: -160px; top: 50%; transform: translateY(-50%); width: 140px; max-height: 250px; overflow: hidden; border-color: var(--neon-purple); box-shadow: 0 0 10px var(--neon-purple); }
 
-        /* XP Log (Öldürme) - Sağ Ortada Dış Köşede */
-        #xp-log { 
-            right: -160px; /* Arenanın sağ duvarının dışında */
-            top: 50%; 
-            transform: translateY(-50%); 
-            width: 140px; 
-            max-height: 250px;
-            overflow: hidden; 
-            border-color: var(--neon-purple); 
-            box-shadow: 0 0 10px var(--neon-purple);
-        }
-
-        /* Kılavuz Butonu - Sağ Üst Dış Köşede */
         #guide-btn {
             position: absolute;
-            top: -20px; /* Arenanın hemen üzerinde */
-            right: -20px; /* Arenanın sağ duvarının dışında */
-            width: 40px; 
-            height: 40px; 
+            top: -20px;
+            right: -20px;
+            width: 40px;
+            height: 40px;
             background: var(--neon-blue);
             border-radius: 50%;
             cursor: pointer;
@@ -109,13 +87,12 @@
             justify-content: center;
             align-items: center;
             font-weight: bold;
-            font-size: 22px; 
+            font-size: 22px;
             color: black;
             box-shadow: 0 0 10px var(--neon-blue);
             z-index: 20;
         }
 
-        /* Ekran Overlay'leri - Z-index güncellendi */
         .overlay {
             position: absolute;
             inset: 0;
@@ -124,10 +101,9 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 1000; /* Her şeyin üzerinde */
+            z-index: 1000;
         }
 
-        /* Butonlar ve Görüntü Ekranları - Değişmedi */
         .btn-gif {
             width: 180px;
             height: 70px;
@@ -146,7 +122,6 @@
         }
         .btn-gif:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--neon-red); }
 
-        /* Dalga ve Duyuru - Değişmedi */
         #announcement {
             position: absolute;
             top: 40%;
@@ -160,13 +135,12 @@
             z-index: 500;
         }
 
-        /* XP Bar - Değişmedi, ortalı kalacak */
         #xp-bar-container {
             position: absolute;
             bottom: 20px;
             left: 50%;
-            transform: translateX(-50%); 
-            width: 75%; 
+            transform: translateX(-50%);
+            width: 75%;
             height: 14px;
             background: #fff;
             border: 2px solid #000;
@@ -174,7 +148,6 @@
         }
         #xp-bar-fill { height: 100%; width: 0%; background: var(--neon-purple); transition: 0.3s; }
         
-        /* Eklenti Menüsü - Değişmedi */
         .upgrade-card {
             background: #222;
             margin: 8px;
@@ -239,14 +212,13 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Oyun Durumları
     let isRunning = false;
     let wave = 0;
     let xp = 0;
+    let xpRequired = 50; // BAŞLANGIÇ XP GEREKSİNİMİ
     let level = 1;
     let enemies = [];
     let bullets = [];
-    let particles = [];
     let keys = {};
     let mousePressed = false;
     let lastShot = 0;
@@ -256,7 +228,6 @@
         speed: 3.5, dmg: 30, shootSpeed: 300, crit: 0, bounce: 0, upgrades: []
     };
 
-    // Ses Efekti (Su Tabancası Simülasyonu)
     function playShootSound() {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -268,7 +239,6 @@
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    // Inputlar
     window.onkeydown = e => keys[e.code] = true;
     window.onkeyup = e => keys[e.code] = false;
     canvas.onmousedown = () => mousePressed = true;
@@ -307,8 +277,12 @@
     function spawnEnemies(isBoss) {
         if (isBoss) {
             const count = Math.min(5, Math.floor(wave/5));
+            // BOSS CANI GÜNCELLENDİ: 5000 * (Dalgadaki Boss Sayısı gibi değil, Dalga Katı)
+            // 5. Dalga -> 1 * 5000 = 5.000
+            // 10. Dalga -> 2 * 5000 = 10.000
+            const bossHp = (wave / 5) * 5000; 
             for(let i=0; i<count; i++) {
-                enemies.push({ x: Math.random()*1000, y: -50, hp: 1000 * (wave/5), maxHp: 1000 * (wave/5), size: 60, speed: 1.2, boss: true, color: `hsl(${Math.random()*360}, 100%, 50%)` });
+                enemies.push({ x: Math.random()*1000, y: -50, hp: bossHp, maxHp: bossHp, size: 70, speed: 1.1, boss: true, color: `hsl(${Math.random()*360}, 100%, 50%)` });
             }
         } else {
             for(let i=0; i<wave*3.5; i++) { 
@@ -322,8 +296,16 @@
         const log = document.createElement('div');
         log.innerHTML = `<span style="color:var(--neon-purple)">+${val} XP</span> <br> ${type}`;
         document.getElementById('log-list').prepend(log);
-        document.getElementById('xp-bar-fill').style.width = Math.min(100, (xp/50)*100) + "%"; 
-        if(xp >= 50) { xp = 0; level++; showUpgrades(); }
+        
+        // XP BAR GÜNCELLEME (DİNAMİK XP GEREKSİNİMİNE GÖRE)
+        document.getElementById('xp-bar-fill').style.width = Math.min(100, (xp/xpRequired)*100) + "%"; 
+        
+        if(xp >= xpRequired) { 
+            xp = 0; 
+            level++; 
+            xpRequired += 25; // HER SEVİYEDE GEREKSİNİM 25 ARTIYOR
+            showUpgrades(); 
+        }
     }
 
     function showUpgrades() {
@@ -334,7 +316,7 @@
         box.innerHTML = '';
         const opts = [
             {t: "+3 Hasar", f: () => player.dmg += 3},
-            {t: "+1 Atış Hızı", f: () => player.shootSpeed -= 30},
+            {t: "+0.3 Saldırı Hızı", f: () => player.shootSpeed = Math.max(50, player.shootSpeed - 30)}, // 300ms üzerinden %10 yani 0.3 etki gibi ayarlandı
             {t: "+1 Armor", f: () => player.armor = Math.min(100, player.armor + 20)},
             {t: "+2 Kritik", f: () => player.crit += 0.1},
             {t: "+1 Seken Mermi", f: () => player.bounce += 1}
@@ -356,13 +338,11 @@
         if (!isRunning) { requestAnimationFrame(loop); return; }
         ctx.clearRect(0,0,1050,650);
 
-        // Hareket (Duvar Kontrolü)
         if (keys['KeyW'] && player.y > 20) player.y -= player.speed;
         if (keys['KeyS'] && player.y < 630) player.y += player.speed;
         if (keys['KeyA'] && player.x > 20) player.x -= player.speed;
         if (keys['KeyD'] && player.x < 1030) player.x += player.speed;
 
-        // Ateş
         if (mousePressed && Date.now() - lastShot > player.shootSpeed) {
             playShootSound();
             const ang = Math.atan2(my - player.y, mx - player.x);
@@ -370,7 +350,6 @@
             lastShot = Date.now();
         }
 
-        // Mermi Fizik
         bullets.forEach((b, i) => {
             b.x += b.vx; b.y += b.vy;
             if (b.x<0 || b.x>1050) { if(b.b > 0){ b.vx*=-1; b.b--; } else bullets.splice(i,1); }
@@ -378,21 +357,17 @@
             ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill();
         });
 
-        // Düşman Fizik
         enemies.forEach((e, i) => {
             const ang = Math.atan2(player.y - e.y, player.x - e.x);
             e.x += Math.cos(ang) * e.speed; e.y += Math.sin(ang) * e.speed;
 
-            // Görsel
             ctx.shadowBlur = 10; ctx.shadowColor = e.color;
             ctx.fillStyle = e.color; ctx.fillRect(e.x-e.size/2, e.y-e.size/2, e.size, e.size);
             ctx.shadowBlur = 0;
             
-            // Can Barı
             ctx.fillStyle="red"; ctx.fillRect(e.x-e.size/2, e.y-e.size/2-8, e.size, 4);
             ctx.fillStyle="#00ff00"; ctx.fillRect(e.x-e.size/2, e.y-e.size/2-8, (e.hp/e.maxHp)*e.size, 4);
 
-            // Çarpışma
             bullets.forEach((bul, bi) => {
                 if (Math.hypot(bul.x - e.x, bul.y - e.y) < e.size) {
                     e.hp -= bul.d; bullets.splice(bi, 1);
@@ -406,10 +381,8 @@
             }
         });
 
-        // Oyuncu Çizim
         ctx.fillStyle = varColor('--neon-blue'); ctx.beginPath(); ctx.arc(player.x, player.y, 20, 0, 7); ctx.fill();
         
-        // Can & Armor Barları
         drawBar(player.x-30, player.y+25, 60, 6, player.hp/player.maxHp, "red");
         drawBar(player.x-30, player.y+33, 60, 6, player.armor/100, varColor('--neon-blue'), "white");
 
