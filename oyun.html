@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameArea Fight - Balanced Boss HP</title>
+    <title>GameArea Fight - Progressive XP System</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap');
 
@@ -337,6 +337,9 @@
         gameState.isRunning = true;
         gameState.wave = 0;
         gameState.xp = 0;
+        // XP sıfırlama ama progresyonu koruma
+        gameState.xpRequired = 50; 
+        gameState.level = 1;
         nextWave();
         if(!animationId) loop();
     }
@@ -372,7 +375,6 @@
     function spawnEnemies(isBoss) {
         if (isBoss) {
             const count = Math.min(5, Math.floor(gameState.wave/5));
-            // BOSS HP GÜNCELLEMESİ: 2000, 4000, 6000...
             const bossHp = (gameState.wave / 5) * 2000; 
             for(let i=0; i<count; i++) enemies.push({ x: Math.random()*1200 + 25, y: -50, hp: bossHp, maxHp: bossHp, size: 70, speed: 1.1, boss: true, color: `hsl(${Math.random()*360}, 100%, 50%)` });
         } else {
@@ -381,16 +383,25 @@
     }
 
     function addXP(val, type, isBossDeath) {
-        gameState.xp += val;
+        // GÜNCEL XP ÖDÜLLERİ: Boss 25, Küçük 10
+        const xpReward = isBossDeath ? 25 : 10;
+        gameState.xp += xpReward;
+        
         const goldPlus = isBossDeath ? 5 : 1;
         gameState.gold += goldPlus;
         updateGoldUI(); saveUser();
+        
         const log = document.createElement('div');
-        log.innerHTML = `<span style="color:var(--neon-purple)">+${val} XP</span> | <span style="color:var(--neon-gold)">+${goldPlus} G</span><br>${type}`;
+        log.innerHTML = `<span style="color:var(--neon-purple)">+${xpReward} XP</span> | <span style="color:var(--neon-gold)">+${goldPlus} G</span><br>${type}`;
         document.getElementById('log-list').prepend(log);
+        
         document.getElementById('xp-bar-fill').style.width = Math.min(100, (gameState.xp/gameState.xpRequired)*100) + "%"; 
+        
         if(gameState.xp >= gameState.xpRequired) { 
-            gameState.xp = 0; gameState.level++; gameState.xpRequired += 25; showUpgrades(); 
+            gameState.xp = 0; 
+            gameState.level++; 
+            gameState.xpRequired += 50; // HER SEVİYEDE 50 ARTIŞ (50, 100, 150...)
+            showUpgrades(); 
         }
     }
 
@@ -467,7 +478,7 @@
                     if (dist < p.radius) {
                         e.hp -= 0.84; 
                         if (e.hp <= 0) {
-                            addXP(e.boss ? 14 : 7, "AURA ÖLDÜRMESİ", e.boss);
+                            addXP(0, "AURA ÖLDÜRMESİ", e.boss); // addXP içindeki ödül sistemi artık içeriden çekiliyor
                             enemies.splice(ei, 1);
                         }
                     }
@@ -488,7 +499,7 @@
             bullets.forEach((bul, bi) => {
                 if (Math.hypot(bul.x - e.x, bul.y - e.y) < e.size) {
                     e.hp -= bul.d; bullets.splice(bi, 1);
-                    if (e.hp <= 0) { addXP(e.boss ? 14:7, e.boss ? "BOSS":"ZOMBİ", e.boss); enemies.splice(i,1); }
+                    if (e.hp <= 0) { addXP(0, e.boss ? "BOSS":"ZOMBİ", e.boss); enemies.splice(i,1); }
                 }
             });
 
