@@ -2,302 +2,453 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>NAVAL SURVIVAL: BLACK FLAG</title>
-    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@400;700&family=Pirata+One&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naval Reborn: Golden Age</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Roboto:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        :root { --gold: #ffd700; --sea: #004d7a; --night: #0a0e1a; --danger: #ff3300; }
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Almendra', serif; color: #fff; user-select: none; }
-        canvas { display: block; margin: 0 auto; cursor: crosshair; }
+        :root {
+            --gold: #ffcc00;
+            --ocean-dark: #002d4d;
+            --ocean-light: #0077be;
+            --danger: #ff4757;
+            --ui-bg: rgba(10, 20, 30, 0.85);
+        }
 
-        /* UI Katmanları */
-        #ui-layer { position: absolute; inset: 0; pointer-events: none; padding: 20px; }
-        .stats-panel { background: rgba(0,0,0,0.7); padding: 15px; border: 2px solid var(--gold); backdrop-filter: blur(5px); pointer-events: all; }
-        .bar { width: 200px; height: 10px; background: #333; border: 1px solid #555; margin: 5px 0; border-radius: 5px; overflow: hidden; }
-        .fill { height: 100%; transition: width 0.3s; }
-        #hp-fill { background: #2ecc71; }
-        #island-hp-fill { background: #f1c40f; }
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Roboto', sans-serif; }
+        canvas { display: block; filter: contrast(110%) brightness(105%); }
 
-        /* Market (Sol Üst) */
-        #market-ui { position: absolute; top: 120px; left: 20px; display: none; pointer-events: all; }
-        .market-card { background: #1a1a1a; border: 2px solid var(--gold); padding: 10px; margin-bottom: 5px; }
+        /* --- PROFESYONEL UI KATMANLARI --- */
+        #hud {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
 
-        /* Duyuru Yazıları */
-        #alert-text { position: absolute; top: 25%; width: 100%; text-align: center; font-size: 40px; font-family: 'Pirata One'; color: var(--danger); text-shadow: 2px 2px #000; opacity: 0; transition: 0.5s; }
+        /* Sol Üst: Oyuncu Durumu */
+        .player-card {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: var(--ui-bg);
+            padding: 15px;
+            border-left: 5px solid var(--gold);
+            min-width: 250px;
+            backdrop-filter: blur(10px);
+            pointer-events: all;
+        }
 
-        /* Başlangıç ve Ölüm Ekranı */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; pointer-events: all; }
-        .modal input { padding: 10px; font-size: 20px; text-align: center; margin: 20px; background: #222; color: var(--gold); border: 2px solid var(--gold); outline: none; }
-        .btn { background: var(--gold); color: #000; padding: 15px 40px; font-weight: bold; cursor: pointer; border: none; font-family: 'Pirata One'; font-size: 24px; transition: 0.3s; }
-        .btn:hover { transform: scale(1.1); box-shadow: 0 0 20px var(--gold); }
-        .hidden { display: none !important; }
+        .bar-outer { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 5px; overflow: hidden; }
+        .bar-inner { height: 100%; width: 100%; transition: width 0.3s ease-out; }
+        #hp-bar { background: linear-gradient(90deg, #ff4757, #ff6b81); }
+        #xp-bar { background: linear-gradient(90deg, var(--gold), #ffa502); width: 0%; }
 
-        /* Envanter */
-        #inventory { position: absolute; bottom: 20px; left: 20px; display: flex; gap: 10px; }
-        .plugin-tag { background: rgba(0,0,0,0.8); border: 1px solid var(--gold); padding: 5px 10px; font-size: 12px; color: var(--gold); }
+        /* Sağ Üst: Leaderboard & Zaman */
+        .leaderboard {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: var(--ui-bg);
+            padding: 10px;
+            width: 180px;
+            font-size: 14px;
+        }
+        .leaderboard h4 { margin: 0 0 10px 0; color: var(--gold); border-bottom: 1px solid #333; }
+
+        /* Sağ Alt: Mini Harita */
+        #mini-map {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            width: 150px; height: 150px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+
+        /* Orta Bildirimler */
+        #announcer {
+            position: absolute;
+            top: 30%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Pirata One';
+            font-size: 60px;
+            color: var(--danger);
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+            opacity: 0;
+            transition: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        /* Giriş Paneli */
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle, #004d7a 0%, #000 100%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .start-box {
+            background: var(--ui-bg);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid var(--gold);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        input {
+            background: #000;
+            border: 2px solid var(--gold);
+            padding: 12px;
+            color: #fff;
+            font-size: 18px;
+            border-radius: 8px;
+            width: 250px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: var(--gold);
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-weight: 900;
+            cursor: pointer;
+            border-radius: 8px;
+            text-transform: uppercase;
+            transition: 0.2s;
+        }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 5px 15px var(--gold); }
+
+        /* Market */
+        #shop-trigger {
+            position: absolute;
+            top: 130px; left: 20px;
+            pointer-events: all;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-<div id="ui-layer">
-    <div class="stats-panel" style="width: fit-content;">
-        <div id="player-name-ui" style="font-size: 20px; color: var(--gold); font-family: 'Pirata One';">KAPTAN</div>
-        <div>GEMİ GÜCÜ</div>
-        <div class="bar"><div id="hp-fill" class="fill" style="width: 100%;"></div></div>
-        <div>ADANIN DURUMU</div>
-        <div class="bar"><div id="island-hp-fill" class="fill" style="width: 100%;"></div></div>
-        <div style="margin-top: 10px; font-size: 18px; color: var(--gold);">🪙 <span id="gold-txt">0</span></div>
-        <div id="time-txt" style="font-size: 14px; color: #aaa;">GÜNDÜZ</div>
+<div id="overlay">
+    <h1 style="font-family: 'Pirata One'; font-size: 80px; color: var(--gold); margin: 0;">NAVAL REBORN</h1>
+    <p style="color: #aaa; margin-bottom: 30px;">Denizlerin Hakimi Olmaya Hazır Mısın?</p>
+    <div class="start-box">
+        <input type="text" id="username" placeholder="KAPTAN İSMİ" maxlength="15">
+        <br>
+        <button class="btn" onclick="Game.start()">DENİZE AÇIL</button>
+    </div>
+</div>
+
+<div id="hud">
+    <div class="player-card">
+        <div id="ui-name" style="font-weight: 900; color: var(--gold);">Kaptan</div>
+        <div style="font-size: 11px; margin-top: 5px;">GEMİ SAĞLIĞI</div>
+        <div class="bar-outer"><div id="hp-bar" class="bar-inner"></div></div>
+        <div style="font-size: 11px; margin-top: 5px;">TECRÜBE (LVL <span id="ui-lvl">1</span>)</div>
+        <div class="bar-outer"><div id="xp-bar" class="bar-inner"></div></div>
+        <div style="margin-top: 10px; font-weight: 900; color: #fff;">🪙 <span id="ui-gold">0</span></div>
     </div>
 
-    <div id="market-ui">
-        <div class="market-card">
-            <div>GEMİ ONARIMI (500 Altın)</div>
-            <button class="btn" style="padding: 5px 10px; font-size: 14px;" onclick="buyItem('repair')">SATIN AL</button>
-        </div>
-        <div class="market-card">
-            <div>HASAR ARTIRICI (1000 Altın)</div>
-            <button class="btn" style="padding: 5px 10px; font-size: 14px;" onclick="buyItem('dmg')">SATIN AL</button>
-        </div>
+    <div class="leaderboard">
+        <h4>EN İYİLER</h4>
+        <div id="lb-list">1. Korsan Kralı<br>2. Siyah İnci</div>
     </div>
 
-    <div id="alert-text">KORSANLAR BASKIN YAPIYOR!</div>
-    <div id="inventory"></div>
+    <div id="shop-trigger">
+        <button class="btn" style="padding: 10px 20px; font-size: 12px; background: #2ecc71;" onclick="Game.openShop()">MARKETİ AÇ [E]</button>
+    </div>
+
+    <canvas id="mini-map"></canvas>
+    <div id="announcer">ADANIZA SALDIRI!</div>
 </div>
 
-<div id="start-screen" class="modal">
-    <h1 style="font-family: 'Pirata One'; font-size: 80px; color: var(--gold);">BLACK FLAG</h1>
-    <input type="text" id="p-name" placeholder="Geminin Adını Yaz..." maxlength="12">
-    <button class="btn" onclick="initGame()">DENİZE AÇIL</button>
-</div>
-
-<div id="death-screen" class="modal hidden">
-    <h1 style="color: var(--danger); font-family: 'Pirata One'; font-size: 60px;">GEMİN BATTI!</h1>
-    <p id="death-info">Tüm altınların denizin dibine karıştı...</p>
-    <button class="btn" onclick="location.reload()">YENİDEN DENE</button>
-</div>
-
-<canvas id="game"></canvas>
+<canvas id="mainCanvas"></canvas>
 
 <script>
-/** 🔊 SES MOTORU **/
-const SFX = {
-    ctx: new (window.AudioContext || window.webkitAudioContext)(),
-    play(f, t, d, v) {
-        const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
-        o.type = t; o.frequency.setValueAtTime(f, this.ctx.currentTime);
-        g.gain.setValueAtTime(v, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime+d);
-        o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+d);
+/**
+ * NAVAL REBORN: ENGINE CORE
+ * Bu bölüm oyunun fizik, render ve logic motorunu içerir.
+ */
+
+const Game = {
+    canvas: document.getElementById('mainCanvas'),
+    ctx: null,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    worldSize: 5000, // Devasa dünya
+    camera: { x: 0, y: 0, zoom: 1 },
+    player: null,
+    entities: [],
+    particles: [],
+    bullets: [],
+    input: { w: false, a: false, s: false, d: false, mouseX: 0, mouseY: 0, mouseDown: false },
+    time: 0,
+    isDay: true,
+    gold: 0,
+    islandHp: 5000000,
+
+    async init() {
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.ctx.imageSmoothingEnabled = true;
+
+        window.addEventListener('keydown', e => this.input[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', e => this.input[e.key.toLowerCase()] = false);
+        window.addEventListener('mousemove', e => {
+            this.input.mouseX = e.clientX;
+            this.input.mouseY = e.clientY;
+        });
+        window.addEventListener('mousedown', () => this.input.mouseDown = true);
+        window.addEventListener('mouseup', () => this.input.mouseDown = false);
+        window.addEventListener('resize', () => {
+            this.width = this.canvas.width = window.innerWidth;
+            this.height = this.canvas.height = window.innerHeight;
+        });
     },
-    shoot() { this.play(150, 'triangle', 0.2, 0.1); },
-    hit() { this.play(80, 'sawtooth', 0.1, 0.1); },
-    pirate() { this.play(200, 'square', 0.5, 0.05); } // Korsan/Zombi hırıltısı simülasyonu
+
+    start() {
+        const name = document.getElementById('username').value || "Kaptan";
+        document.getElementById('ui-name').innerText = name;
+        document.getElementById('overlay').style.display = 'none';
+        
+        this.player = new Player(this.worldSize / 2, this.worldSize / 2, name);
+        this.generateWorld();
+        this.loop();
+    },
+
+    generateWorld() {
+        // Canavarlar ve Adalar
+        for(let i=0; i<100; i++) {
+            this.entities.push(new Entity('monster', Math.random()*this.worldSize, Math.random()*this.worldSize));
+        }
+        // Market Adası (Sabit)
+        this.entities.push(new Entity('shop_island', 400, 400));
+        // Oyuncu Adası (Sabit)
+        this.entities.push(new Entity('player_island', this.worldSize - 600, this.worldSize - 600));
+    },
+
+    loop() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    },
+
+    update() {
+        this.time += 0.01;
+        this.isDay = (Math.sin(this.time * 0.2) > -0.3);
+
+        this.player.update();
+        
+        // Kamera takibi
+        this.camera.x += (this.player.x - this.width/2 - this.camera.x) * 0.1;
+        this.camera.y += (this.player.y - this.height/2 - this.camera.y) * 0.1;
+
+        // Varlıklar
+        this.entities.forEach((en, index) => {
+            en.update();
+            // Çarpışma: Oyuncu mermisi vs Düşman
+            this.bullets.forEach((b, bi) => {
+                if(Math.hypot(b.x - en.x, b.y - en.y) < en.size) {
+                    en.hp -= this.player.stats.dmg;
+                    this.bullets.splice(bi, 1);
+                    if(en.hp <= 0) {
+                        this.gold += en.reward;
+                        this.player.xp += 25;
+                        this.entities.splice(index, 1);
+                        if(en.type === 'monster') {
+                            setTimeout(() => this.entities.push(new Entity('monster', Math.random()*this.worldSize, Math.random()*this.worldSize)), 5000);
+                        }
+                    }
+                }
+            });
+        });
+
+        this.bullets.forEach((b, i) => {
+            b.x += b.vx; b.y += b.vy;
+            b.life--;
+            if(b.life <= 0) this.bullets.splice(i, 1);
+        });
+
+        // UI Sync
+        document.getElementById('ui-gold').innerText = Math.floor(this.gold);
+        document.getElementById('hp-bar').style.width = (this.player.hp / this.player.maxHp * 100) + '%';
+        document.getElementById('xp-bar').style.width = (this.player.xp % 100) + '%';
+        document.getElementById('ui-lvl').innerText = Math.floor(this.player.xp / 100) + 1;
+    },
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0,0,this.width, this.height);
+
+        ctx.save();
+        ctx.translate(-this.camera.x, -this.camera.y);
+
+        // Okyanus Çizimi (Sonsuz Izgara)
+        this.drawOcean();
+
+        // Varlıklar
+        this.entities.forEach(en => en.draw(ctx));
+        this.bullets.forEach(b => {
+            ctx.fillStyle = "#fff";
+            ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+        });
+
+        this.player.draw(ctx);
+
+        ctx.restore();
+
+        // Gece Efekti (Overlay)
+        if(!this.isDay) {
+            ctx.fillStyle = 'rgba(0, 5, 20, 0.4)';
+            ctx.fillRect(0,0,this.width, this.height);
+        }
+
+        this.drawMiniMap();
+    },
+
+    drawOcean() {
+        const ctx = this.ctx;
+        const spacing = 100;
+        const startX = Math.floor(this.camera.x / spacing) * spacing;
+        const startY = Math.floor(this.camera.y / spacing) * spacing;
+
+        ctx.strokeStyle = this.isDay ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)';
+        ctx.beginPath();
+        for(let x = startX; x < startX + this.width + spacing; x += spacing) {
+            ctx.moveTo(x, this.camera.y); ctx.lineTo(x, this.camera.y + this.height);
+        }
+        for(let y = startY; y < startY + this.height + spacing; y += spacing) {
+            ctx.moveTo(this.camera.x, y); ctx.lineTo(this.camera.x + this.width, y);
+        }
+        ctx.stroke();
+    },
+
+    drawMiniMap() {
+        const mc = document.getElementById('mini-map');
+        const mctx = mc.getContext('2d');
+        mc.width = 150; mc.height = 150;
+        mctx.fillStyle = "rgba(0,40,80,0.5)";
+        mctx.fillRect(0,0,150,150);
+
+        const r = 150 / this.worldSize;
+        mctx.fillStyle = varGold;
+        mctx.fillRect(this.player.x * r - 2, this.player.y * r - 2, 4, 4);
+        
+        mctx.fillStyle = "red";
+        this.entities.forEach(en => {
+            if(en.type === 'monster') mctx.fillRect(en.x * r, en.y * r, 2, 2);
+        });
+    }
 };
 
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-canvas.width = 1200; canvas.height = 850;
-
-let player, entities = [], bullets = [], particles = [];
-let gold = 0, gameTime = 0, isDay = true, gameState = 'START';
-const keys = {}; const mouse = {x:0, y:0, down:false};
-
-// Koordinat Sabitleri
-const MARKET_POS = {x: 100, y: 100, r: 80};
-const ISLAND_POS = {x: 1000, y: 700, r: 100};
-let islandHP = 5000;
-let marketOccupied = true;
+/**
+ * ENTITY & PLAYER CLASSES
+ */
 
 class Player {
-    constructor(name) {
-        this.name = name; this.x = 600; this.y = 425; this.r = 20;
-        this.hp = 100; this.maxHp = 100; this.speed = 3; this.dmg = 35;
-        this.angle = 0;
+    constructor(x, y, name) {
+        this.x = x; this.y = y; this.name = name;
+        this.angle = 0; this.speed = 4;
+        this.hp = 1000; this.maxHp = 1000;
+        this.xp = 0;
+        this.stats = { dmg: 50, fireRate: 20 };
+        this.lastShot = 0;
     }
+
     update() {
-        let vx = 0, vy = 0;
-        if(keys['w']) vy -= this.speed; if(keys['s']) vy += this.speed;
-        if(keys['a']) vx -= this.speed; if(keys['d']) vx += this.speed;
-        this.x = Math.max(20, Math.min(1180, this.x + vx));
-        this.y = Math.max(20, Math.min(830, this.y + vy));
-        this.angle = Math.atan2(mouse.y - this.y, mouse.x - this.x);
+        let mx = 0, my = 0;
+        if(Game.input.w) my -= this.speed;
+        if(Game.input.s) my += this.speed;
+        if(Game.input.a) mx -= this.speed;
+        if(Game.input.d) mx += this.speed;
+
+        this.x += mx; this.y += my;
+        this.angle = Math.atan2(Game.input.mouseY - (this.y - Game.camera.y), Game.input.mouseX - (this.x - Game.camera.x));
+
+        if(Game.input.mouseDown && Game.time * 100 - this.lastShot > this.stats.fireRate) {
+            this.shoot();
+            this.lastShot = Game.time * 100;
+        }
     }
-    draw() {
-        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-        ctx.fillStyle = '#8b4513'; ctx.fillRect(-25, -12, 50, 24); // Gemi gövdesi
-        ctx.fillStyle = '#fff'; ctx.fillRect(-5, -20, 10, 40); // Yelken
+
+    shoot() {
+        Game.bullets.push({
+            x: this.x, y: this.y, 
+            vx: Math.cos(this.angle) * 12, 
+            vy: Math.sin(this.angle) * 12,
+            life: 100
+        });
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        
+        // Gemi Tasarımı
+        ctx.fillStyle = '#5d4037';
+        ctx.beginPath();
+        ctx.moveTo(30, 0); ctx.lineTo(-20, -15); ctx.lineTo(-20, 15); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-10, -2, 5, 4); // Yelken direği
+        
         ctx.restore();
+        
+        // İsim etiketi
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 14px Roboto";
+        ctx.textAlign = "center";
+        ctx.fillText(this.name, this.x, this.y - 30);
     }
 }
 
 class Entity {
     constructor(type, x, y) {
-        this.type = type; // 'monster', 'pirate', 'raider'
-        this.x = x; this.y = y; this.r = type === 'monster' ? 40 : 18;
-        this.hp = type === 'monster' ? 300 : 100;
-        this.speed = type === 'raider' ? 2.5 : 1.5;
-        this.color = {monster: '#8e44ad', pirate: '#c0392b', raider: '#d35400'}[type];
+        this.type = type; this.x = x; this.y = y;
+        this.hp = 200; this.size = 30;
+        this.reward = 100;
+        this.color = type === 'monster' ? '#ff4757' : '#2ecc71';
+        this.wobble = Math.random() * Math.PI;
     }
+
     update() {
-        if(this.type !== 'monster') {
-            const target = (this.type === 'raider' && gameTime % 18000 < 3000) ? ISLAND_POS : player;
-            const dist = Math.hypot(target.x - this.x, target.y - this.y);
-            if(dist < 400 || this.type === 'raider') {
-                const ang = Math.atan2(target.y - this.y, target.x - this.x);
-                this.x += Math.cos(ang) * this.speed;
-                this.y += Math.sin(ang) * this.speed;
-            }
+        if(this.type === 'monster') {
+            this.wobble += 0.05;
+            this.x += Math.cos(this.wobble) * 0.5;
+            this.y += Math.sin(this.wobble) * 0.5;
         }
     }
-    draw() {
-        ctx.strokeStyle = this.color; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.stroke();
-        // HP Bar
-        ctx.fillStyle = '#f00'; ctx.fillRect(this.x-20, this.y-this.r-10, 40, 4);
-        ctx.fillStyle = '#0f0'; ctx.fillRect(this.x-20, this.y-this.r-10, 40 * (this.hp/(this.type==='monster'?300:100)), 4);
-    }
-}
 
-function initGame() {
-    const name = document.getElementById('p-name').value || "Kaptan";
-    player = new Player(name);
-    document.getElementById('player-name-ui').innerText = name;
-    document.getElementById('start-screen').classList.add('hidden');
-    gameState = 'PLAYING';
-    spawnStaticMonsters();
-    spawnMarketGuards();
-    requestAnimationFrame(gameLoop);
-}
-
-function spawnStaticMonsters() {
-    for(let i=0; i<8; i++) {
-        entities.push(new Entity('monster', Math.random()*1000 + 100, Math.random()*600 + 100));
-    }
-}
-
-function spawnMarketGuards() {
-    marketOccupied = true;
-    for(let i=0; i<4; i++) {
-        entities.push(new Entity('pirate', MARKET_POS.x + (Math.random()-0.5)*100, MARKET_POS.y + (Math.random()-0.5)*100));
-    }
-}
-
-function buyItem(type) {
-    if(type === 'repair' && gold >= 500) {
-        gold -= 500; player.hp = player.maxHp;
-        addPluginTag("TAMİR KİTİ");
-    } else if(type === 'dmg' && gold >= 1000) {
-        gold -= 1000; player.dmg += 20;
-        addPluginTag("KESKİN GÜLLE");
-    }
-}
-
-function addPluginTag(txt) {
-    const tag = document.createElement('div');
-    tag.className = 'plugin-tag'; tag.innerText = txt;
-    document.getElementById('inventory').appendChild(tag);
-}
-
-function gameLoop() {
-    if(gameState !== 'PLAYING') return;
-    gameTime++;
-
-    // Gün/Gece Döngüsü (1 Dakika Gündüz, 1 Dakika Gece - Toplam 7200 frame civarı)
-    isDay = (gameTime % 7200) < 3600;
-    document.getElementById('time-txt').innerText = isDay ? "GÜNDÜZ (Yamyamlar Aktif)" : "GECE (Korsanlar Aktif)";
-    
-    // Arkaplan
-    ctx.fillStyle = isDay ? '#005b8e' : '#050a14';
-    ctx.fillRect(0,0,1200,850);
-    
-    // Güneş / Ay
-    ctx.fillStyle = isDay ? '#f1c40f' : '#ecf0f1';
-    ctx.beginPath(); ctx.arc(isDay?100:1100, 100, 40, 0, Math.PI*2); ctx.fill();
-
-    // Market ve Ada Görseli
-    ctx.fillStyle = '#444'; ctx.beginPath(); ctx.arc(MARKET_POS.x, MARKET_POS.y, MARKET_POS.r, 0, Math.PI*2); ctx.fill(); // Market Kayalığı
-    ctx.fillStyle = '#2d5a27'; ctx.beginPath(); ctx.arc(ISLAND_POS.x, ISLAND_POS.y, ISLAND_POS.r, 0, Math.PI*2); ctx.fill(); // Kendi Adamız
-    
-    // Market Kontrolü
-    const distToMarket = Math.hypot(player.x - MARKET_POS.x, player.y - MARKET_POS.y);
-    const guards = entities.filter(e => e.type === 'pirate');
-    marketOccupied = guards.length > 0;
-    document.getElementById('market-ui').style.display = (distToMarket < 150 && !marketOccupied) ? 'block' : 'none';
-
-    // Periyodik Korsan Baskını (Her 3 Dakikada bir - 10800 frame)
-    if(gameTime % 10800 === 9000) { // Baskından 30 sn önce
-        const alert = document.getElementById('alert-text');
-        alert.innerText = "30 SANİYE SONRA ADANIZA BASKIN YAPILACAK!"; alert.style.opacity = 1;
-        setTimeout(() => alert.style.opacity = 0, 5000);
-    }
-    if(gameTime % 10800 === 0) {
-        for(let i=0; i<15; i++) entities.push(new Entity('raider', 0, Math.random()*850));
-    }
-
-    // Market Korumaları Spawn (Her 1 dakikada)
-    if(gameTime % 3600 === 0 && guards.length === 0) spawnMarketGuards();
-
-    player.update(); player.draw();
-
-    // Ateş Etme
-    if(mouse.down && gameTime % 15 === 0) {
-        const ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-        bullets.push({x: player.x, y: player.y, vx: Math.cos(ang)*12, vy: Math.sin(ang)*12});
-        SFX.shoot();
-    }
-
-    // Varlıklar İşleme
-    entities.forEach((en, ei) => {
-        en.update(); en.draw();
-        
-        // Oyuncuya saldırı
-        const d = Math.hypot(en.x - player.x, en.y - player.y);
-        if(d < en.r + player.r) {
-            player.hp -= 0.5;
-            if(player.hp <= 0) {
-                gameState = 'DEAD';
-                document.getElementById('death-screen').classList.remove('hidden');
-            }
+    draw(ctx) {
+        ctx.save();
+        if(this.type === 'monster') {
+            ctx.fillStyle = this.color;
+            ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size + Math.sin(this.wobble)*5, 0, Math.PI*2);
+            ctx.fill();
+        } else if(this.type === 'shop_island') {
+            ctx.fillStyle = "#f1c40f";
+            ctx.beginPath(); ctx.arc(this.x, this.y, 150, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#000"; ctx.fillText("MARKET ADASI", this.x, this.y);
+        } else if(this.type === 'player_island') {
+            ctx.fillStyle = "#2ecc71";
+            ctx.beginPath(); ctx.arc(this.x, this.y, 200, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.fillText("SİZİN ADANIZ", this.x, this.y);
         }
-
-        // Adaya saldırı
-        if(en.type === 'raider') {
-            const di = Math.hypot(en.x - ISLAND_POS.x, en.y - ISLAND_POS.y);
-            if(di < en.r + ISLAND_POS.r) islandHP -= 20;
-        }
-
-        // Mermi Çarpışma
-        bullets.forEach((b, bi) => {
-            if(Math.hypot(b.x - en.x, b.y - en.y) < en.r) {
-                en.hp -= player.dmg; bullets.splice(bi, 1);
-                SFX.hit();
-                if(en.hp <= 0) {
-                    gold += 100; entities.splice(ei, 1);
-                    if(en.type === 'pirate') SFX.pirate();
-                }
-            }
-        });
-    });
-
-    bullets.forEach((b, i) => { 
-        b.x += b.vx; b.y += b.vy; 
-        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
-        if(b.x<0 || b.x>1200 || b.y<0 || b.y>850) bullets.splice(i,1);
-    });
-
-    // UI Güncelleme
-    document.getElementById('hp-fill').style.width = player.hp + '%';
-    document.getElementById('island-hp-fill').style.width = (islandHP/5000*100) + '%';
-    document.getElementById('gold-txt').innerText = gold;
-
-    requestAnimationFrame(gameLoop);
+        ctx.restore();
+    }
 }
 
-window.onkeydown = e => keys[e.key.toLowerCase()] = true;
-window.onkeyup = e => keys[e.key.toLowerCase()] = false;
-window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
-window.onmousedown = () => { mouse.down = true; if(SFX.ctx.state === 'suspended') SFX.ctx.resume(); };
-window.onmouseup = () => mouse.down = false;
+const varGold = "#ffcc00";
 
+// Başlat
+Game.init();
 </script>
 </body>
 </html>
