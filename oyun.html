@@ -2,299 +2,201 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Melodic Runner | Pro Piano Edition</title>
-    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
+    <title>Piano Highway | Rhythm Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Orbitron:wght@900&display=swap" rel="stylesheet">
     <style>
-        :root { --neon-blue: #00f2ff; --neon-pink: #ff00ff; --gold: #ffcc00; --bg: #050508; }
-        body, html { margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: 'Orbitron', sans-serif; }
+        :root { --p: #00f2ff; --s: #ff00ff; --bg: #020205; }
+        body, html { margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: 'Orbitron'; color: white; }
         canvas { display: block; }
 
-        /* UI Katmanı */
-        #ui {
-            position: absolute; inset: 0; pointer-events: none; z-index: 100; padding: 40px;
-            display: flex; flex-direction: column; justify-content: space-between;
+        /* MENU UI */
+        #menu {
+            position: fixed; inset: 0; background: rgba(2,2,5,0.95);
+            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
+            border: 5px solid var(--p); margin: 50px;
         }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .piano-visualizer { display: flex; gap: 5px; margin-top: 20px; }
-        .key-notif { 
-            width: 40px; height: 10px; background: rgba(0, 242, 255, 0.1); 
-            border: 1px solid var(--neon-blue); transition: 0.1s;
-        }
-        .key-active { background: var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue); }
-
-        #start-screen {
-            position: fixed; inset: 0; background: radial-gradient(circle, #101025 0%, #000 100%);
-            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
-        }
+        .stat { font-size: 20px; margin: 10px; color: var(--s); }
         .btn {
-            background: transparent; border: 2px solid var(--neon-blue); color: var(--neon-blue);
-            padding: 20px 60px; font-family: 'Syncopate'; font-weight: 900; cursor: pointer;
-            font-size: 20px; transition: 0.3s; letter-spacing: 5px;
+            background: var(--p); color: black; border: none; padding: 20px 50px;
+            font-family: 'Syncopate'; cursor: pointer; font-weight: 900; margin-top: 30px;
         }
-        .btn:hover { background: var(--neon-blue); color: black; box-shadow: 0 0 50px var(--neon-blue); }
+
+        #hud {
+            position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-around;
+            pointer-events: none; text-shadow: 0 0 10px var(--p);
+        }
     </style>
 </head>
 <body>
 
-<div id="start-screen">
-    <h1 style="font-family: 'Syncopate'; font-size: 50px; color: white; margin-bottom: 50px; letter-spacing: 10px;">MELODIC RUNNER</h1>
-    <p style="color: var(--neon-blue); margin-bottom: 30px;">PIANO ENGINE v3.4 | 2026</p>
-    <button class="btn" onclick="Game.init()">SİSTEMİ YÜKLE</button>
+<div id="hud">
+    <div>TRACK: <span id="track-name">STORM_SONATA</span></div>
+    <div>SCORE: <span id="score">0000</span></div>
+    <div>PROGRESS: <span id="prog">0%</span></div>
 </div>
 
-<div id="ui">
-    <div class="header">
-        <div>
-            <div style="font-size: 10px; color: var(--neon-pink);">CURRENT COMPOSITION</div>
-            <div id="ui-lvl" style="font-size: 32px; color: white; font-weight: 900;">LEVEL: 01</div>
-        </div>
-        <div style="text-align: right;">
-            <div id="score" style="font-size: 24px; color: var(--gold);">SCORE: 0000</div>
-            <div id="combo" style="font-size: 12px; color: white;">COMBO: x1</div>
-        </div>
-    </div>
-    <div class="piano-visualizer" id="viz">
-        <div class="key-notif" id="key-a"></div>
-        <div class="key-notif" id="key-w"></div>
-        <div class="key-notif" id="key-s"></div>
-        <div class="key-notif" id="key-d"></div>
-    </div>
+<div id="menu">
+    <h1 style="font-family: 'Syncopate'; font-size: 40px;">COMPOSITION COMPLETE</h1>
+    <div class="stat">ACCURACY: <span id="stat-acc">0%</span></div>
+    <div class="stat">NOTES HIT: <span id="stat-hits">0</span></div>
+    <button class="btn" onclick="Engine.nextTrack()">NEXT TRACK</button>
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<canvas id="view"></canvas>
 
 <script>
 /**
- * PROFESYONEL SES MOTORU (PIANO SYNTH)
- * Gerçek frekanslarla piyano notalarını simüle eder.
+ * PRO AUDIO SAMPLES
  */
-const PianoEngine = {
+const AudioEngine = {
     ctx: null,
-    frequencies: {
-        'a': 261.63, // C4
-        'w': 293.66, // D4
-        's': 329.63, // E4
-        'd': 349.23, // F4
-        'arrowleft': 392.00,  // G4
-        'arrowup': 440.00,    // A4
-        'arrowdown': 493.88,  // B4
-        'arrowright': 523.25  // C5
-    },
-    
-    init() {
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    },
-
-    playNote(key) {
-        if(!this.ctx || !this.frequencies[key]) return;
-        const freq = this.frequencies[key];
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-
-        osc.type = 'triangle'; // Piyano tınısına yakın yumuşak ses
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-
-        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 1.5);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start();
-        osc.stop(this.ctx.currentTime + 1.5);
+    freqs: [261.63, 293.66, 329.63, 349.23], // C, D, E, F
+    init() { this.ctx = new AudioContext(); },
+    play(i) {
+        const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = this.freqs[i];
+        g.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + 0.5);
     }
 };
 
 /**
- * OYUN MOTORU (CORE)
+ * HIGHWAY ENGINE
  */
-const Game = {
-    canvas: document.getElementById('gameCanvas'),
-    ctx: null,
-    level: 1,
-    score: 0,
-    combo: 0,
-    player: { x: 100, y: 100, vx: 0, vy: 0, w: 30, h: 30, jumps: 0 },
-    platforms: [],
-    notes: [], // Toplanabilir müzik notaları
-    particles: [],
-    camera: { x: 0, y: 0 },
-    keys: {},
+const Engine = {
+    lvl: 1, score: 0, hits: 0, totalInTrack: 40,
+    notes: [], keys: [false, false, false, false],
+    tracks: [
+        { name: "NEON_BEETHOVEN", speed: 5, count: 30 },
+        { name: "CYBER_MOZART", speed: 8, count: 50 },
+        { name: "QUANTUM_SYNTH", speed: 12, count: 80 }
+    ],
 
     init() {
-        document.getElementById('start-screen').style.display = 'none';
-        PianoEngine.init();
-        this.ctx = this.canvas.getContext('2d');
+        this.cvs = document.getElementById('view');
+        this.ctx = this.cvs.getContext('2d');
         this.resize();
         window.onresize = () => this.resize();
-
-        window.onkeydown = (e) => {
-            const k = e.key.toLowerCase();
-            this.keys[k] = true;
-            if(this.player.jumps < 2 && (k === 'w' || k === 'arrowup' || k === ' ')) {
-                this.player.vy = -12;
-                this.player.jumps++;
-            }
-            if(PianoEngine.frequencies[k]) {
-                PianoEngine.playNote(k);
-                this.triggerVisualizer(k);
-            }
-        };
-        window.onkeyup = (e) => this.keys[e.key.toLowerCase()] = false;
-
-        this.loadLevel(1);
+        
+        AudioEngine.init();
+        
+        window.onkeydown = (e) => this.handleKey(e.key, true);
+        window.onkeyup = (e) => this.handleKey(e.key, false);
+        
+        this.startTrack(0);
         this.loop();
     },
 
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-    },
+    resize() { this.cvs.width = window.innerWidth; this.cvs.height = window.innerHeight; },
 
-    triggerVisualizer(key) {
-        const el = document.getElementById('key-' + key);
-        if(el) {
-            el.classList.add('key-active');
-            setTimeout(() => el.classList.remove('key-active'), 150);
-        }
-    },
-
-    loadLevel(n) {
-        this.level = n;
-        this.player.x = 100;
-        this.player.y = 300;
-        this.platforms = [];
-        this.notes = [];
-        this.camera.x = 0;
-
-        // Bölüm Tasarımı (Piyano Tuşu Şeklinde Platformlar)
-        let curX = 0;
-        for(let i=0; i < 30 + (n * 5); i++) {
-            let width = 100 + Math.random() * 200;
-            let height = 30;
-            let gap = 50 + Math.random() * 100;
-            let y = 400 + (Math.sin(i * 0.5) * 150);
-            
-            this.platforms.push({ x: curX, y: y, w: width, h: height, color: i % 2 === 0 ? '#fff' : '#000' });
-            
-            // Platform üstüne nota yerleştir
-            if(Math.random() > 0.4) {
-                this.notes.push({ x: curX + width/2, y: y - 50, collected: false });
+    handleKey(k, s) {
+        const map = { 'a': 0, 's': 1, 'd': 2, 'f': 3 };
+        const idx = map[k.toLowerCase()];
+        if(idx !== undefined) {
+            this.keys[idx] = s;
+            if(s) {
+                AudioEngine.play(idx);
+                this.checkHit(idx);
             }
-            curX += width + gap;
         }
-        
-        this.finishX = curX;
-        document.getElementById('ui-lvl').innerText = "LEVEL: " + n.toString().padStart(2, '0');
+    },
+
+    startTrack(idx) {
+        this.currentTrackIdx = idx;
+        const t = this.tracks[idx];
+        this.lvl = idx + 1;
+        this.score = 0; this.hits = 0;
+        this.notes = [];
+        this.totalInTrack = t.count;
+        this.spawned = 0;
+        document.getElementById('track-name').innerText = t.name;
+        document.getElementById('menu').style.display = 'none';
+        this.active = true;
+    },
+
+    checkHit(lane) {
+        const hitZoneY = this.cvs.height - 100;
+        this.notes.forEach(n => {
+            if(!n.hit && n.lane === lane && Math.abs(n.y - hitZoneY) < 50) {
+                n.hit = true;
+                this.hits++;
+                this.score += 100;
+                document.getElementById('score').innerText = this.score;
+            }
+        });
+    },
+
+    nextTrack() {
+        const next = (this.currentTrackIdx + 1) % this.tracks.length;
+        this.startTrack(next);
     },
 
     update() {
-        const p = this.player;
-        if(this.keys['a'] || this.keys['arrowleft']) p.vx -= 0.8;
-        if(this.keys['d'] || this.keys['arrowright']) p.vx += 0.8;
+        if(!this.active) return;
+        const t = this.tracks[this.currentTrackIdx];
         
-        p.vy += 0.6; // Gravity
-        p.vx *= 0.9;
-        p.x += p.vx;
-        p.y += p.vy;
+        // Spawn notes based on rhythm
+        if(this.spawned < t.count && Math.random() < 0.05) {
+            this.notes.push({ lane: Math.floor(Math.random()*4), y: -50, hit: false });
+            this.spawned++;
+        }
 
-        // Platform Çarpışması
-        this.platforms.forEach(plat => {
-            if(p.x < plat.x + plat.w && p.x + p.w > plat.x && p.y + p.h > plat.y && p.y < plat.y + plat.h) {
-                if(p.vy > 0 && p.y < plat.y) {
-                    p.y = plat.y - p.h;
-                    p.vy = 0;
-                    p.jumps = 0;
-                }
+        this.notes.forEach((n, i) => {
+            n.y += t.speed;
+            if(n.y > this.cvs.height) {
+                if(!n.hit) this.score = Math.max(0, this.score - 50);
+                this.notes.splice(i, 1);
+                if(this.spawned >= t.count && this.notes.length === 0) this.endTrack();
             }
         });
 
-        // Nota Toplama
-        this.notes.forEach(n => {
-            if(!n.collected && Math.hypot(p.x - n.x, p.y - n.y) < 40) {
-                n.collected = true;
-                this.score += 100;
-                this.combo++;
-                PianoEngine.playNote(['a','w','s','d'][Math.floor(Math.random()*4)]);
-                this.burst(n.x, n.y);
-                document.getElementById('score').innerText = "SCORE: " + this.score.toString().padStart(4, '0');
-            }
-        });
-
-        // Kamera Takibi
-        this.camera.x += (p.x - this.canvas.width/3 - this.camera.x) * 0.1;
-
-        // Ölüm ve Bölüm Geçme
-        if(p.y > this.canvas.height + 500) this.loadLevel(this.level);
-        if(p.x > this.finishX) this.loadLevel(this.level + 1);
+        document.getElementById('prog').innerText = Math.floor((this.spawned / t.count) * 100) + "%";
     },
 
-    burst(x, y) {
-        for(let i=0; i<10; i++) {
-            this.particles.push({
-                x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1
-            });
-        }
+    endTrack() {
+        this.active = false;
+        document.getElementById('menu').style.display = 'flex';
+        document.getElementById('stat-acc').innerText = Math.floor((this.hits / this.totalInTrack) * 100) + "%";
+        document.getElementById('stat-hits').innerText = this.hits;
     },
 
     draw() {
         const ctx = this.ctx;
-        ctx.fillStyle = '#050508';
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.fillStyle = '#020205'; ctx.fillRect(0, 0, this.cvs.width, this.cvs.height);
 
-        // Arka Plan Efekti (Piyano Telleri)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        for(let i=0; i<this.canvas.height; i+=40) {
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(this.canvas.width, i); ctx.stroke();
+        const laneW = 100;
+        const startX = this.cvs.width/2 - 200;
+
+        // Highway Lanes
+        for(let i=0; i<4; i++) {
+            ctx.strokeStyle = this.keys[i] ? varName('--p') : '#111122';
+            ctx.lineWidth = this.keys[i] ? 4 : 1;
+            ctx.strokeRect(startX + i*laneW, 0, laneW, this.cvs.height);
+            
+            // Hit Zone
+            ctx.fillStyle = this.keys[i] ? 'rgba(0, 242, 255, 0.2)' : 'rgba(255,255,255,0.02)';
+            ctx.fillRect(startX + i*laneW, this.cvs.height - 120, laneW, 40);
         }
 
-        ctx.save();
-        ctx.translate(-this.camera.x, 0);
-
-        // Platformlar (Piyano Tuşları)
-        this.platforms.forEach(p => {
-            ctx.fillStyle = p.color;
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = p.color === '#fff' ? 'rgba(255,255,255,0.5)' : 'rgba(0,242,255,0.5)';
-            ctx.fillRect(p.x, p.y, p.w, p.h);
-            ctx.strokeStyle = '#00f2ff';
-            ctx.strokeRect(p.x, p.y, p.w, p.h);
-        });
-
-        // Notalar
+        // Notes
         this.notes.forEach(n => {
-            if(!n.collected) {
-                ctx.fillStyle = '#ff00ff';
-                ctx.font = '30px Arial';
-                ctx.shadowColor = '#ff00ff'; ctx.shadowBlur = 15;
-                ctx.fillText('♪', n.x, n.y);
-            }
+            if(n.hit) return;
+            ctx.fillStyle = n.lane % 2 === 0 ? varName('--p') : varName('--s');
+            ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle;
+            ctx.fillRect(startX + n.lane*laneW + 10, n.y, laneW - 20, 20);
         });
 
-        // Parçacıklar
-        this.particles.forEach((pt, i) => {
-            ctx.globalAlpha = pt.life;
-            ctx.fillStyle = '#ffcc00';
-            ctx.fillRect(pt.x, pt.y, 4, 4);
-            pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.02;
-            if(pt.life <= 0) this.particles.splice(i, 1);
-        });
-
-        // Oyuncu (Yürüyen Nota)
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#fff';
-        ctx.shadowBlur = 25; ctx.shadowColor = '#00f2ff';
-        ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
-
-        ctx.restore();
+        ctx.shadowBlur = 0;
+        requestAnimationFrame(() => this.loop());
     },
 
-    loop() {
-        this.update();
-        this.draw();
-        requestAnimationFrame(() => this.loop());
-    }
+    loop() { this.update(); this.draw(); }
 };
+
+function varName(n) { return getComputedStyle(document.documentElement).getPropertyValue(n); }
+Engine.init();
 </script>
 </body>
 </html>
