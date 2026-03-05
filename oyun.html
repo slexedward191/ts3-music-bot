@@ -2,355 +2,322 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>VOID SURVIVOR: PROTOCOL ZERO</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
+    <title>SURVIVOR PROTOCOL: INFINITY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00f2ff; --magenta: #ff00ff; --blood: #ff004c; }
-        body { margin: 0; overflow: hidden; background: #020202; font-family: 'Orbitron', sans-serif; color: #fff; }
-        canvas { display: block; filter: contrast(1.1) saturate(1.2); }
+        :root { --neon: #00f2ff; --gold: #ffcc00; --bg: #03040a; }
+        body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'Rajdhani', sans-serif; color: #fff; }
+        canvas { display: block; }
 
-        /* UI Overlay */
-        #ui-container { position: absolute; inset: 0; pointer-events: none; padding: 30px; }
-        .hud-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        /* PROFESYONEL HUD */
+        #main-hud {
+            position: absolute; inset: 0; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 25px;
+        }
+        .hud-top { display: flex; justify-content: space-between; }
+        .bar-wrapper { width: 350px; background: rgba(0,0,0,0.6); border: 1px solid #333; padding: 4px; border-radius: 4px; }
+        .bar-inner { height: 12px; transition: width 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        #hp-bar { background: linear-gradient(90deg, #ff0055, #ff5e00); width: 100%; }
+        #xp-bar { background: linear-gradient(90deg, var(--neon), #bd00ff); width: 0%; }
         
-        .health-module { width: 300px; }
-        .bar-bg { width: 100%; height: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; overflow: hidden; position: relative; }
-        #hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, var(--blood), #ff6a00); transition: width 0.3s cubic-bezier(0.1, 0.9, 0.2, 1); }
-        #xp-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon), var(--magenta)); transition: width 0.4s; }
-        
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.6); }
-        .stats-grid span { color: var(--neon); font-weight: bold; }
-
-        /* Upgrade System */
-        #upgrade-screen {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none;
-            flex-direction: column; align-items: center; justify-content: center; z-index: 1000; pointer-events: all;
-            backdrop-filter: blur(10px);
+        /* KARAKTER PANELİ */
+        #char-panel {
+            position: absolute; right: 20px; top: 100px; background: rgba(0,0,0,0.85);
+            border: 1px solid var(--neon); padding: 15px; border-radius: 10px; min-width: 150px;
+            backdrop-filter: blur(10px); display: none;
         }
-        .card-wrapper { display: flex; gap: 25px; margin-top: 40px; }
-        .upgrade-card {
-            width: 260px; height: 380px; background: linear-gradient(145deg, #111, #050505);
-            border: 1px solid rgba(0,242,255,0.2); border-radius: 20px; padding: 30px;
-            text-align: center; cursor: pointer; transition: 0.4s; position: relative;
-        }
-        .upgrade-card:hover { transform: translateY(-20px); border-color: var(--neon); box-shadow: 0 0 50px rgba(0,242,255,0.3); }
-        .upgrade-card h3 { color: var(--neon); margin-bottom: 20px; font-size: 20px; letter-spacing: 2px; }
-        .upgrade-card p { color: #888; line-height: 1.6; font-size: 14px; }
-        .rarity { position: absolute; top: 15px; right: 15px; font-size: 10px; padding: 4px 8px; border-radius: 5px; background: #222; }
+        .stat-row { display: flex; justify-content: space-between; margin: 5px 0; border-bottom: 1px solid #222; }
+        .stat-val { color: var(--neon); font-weight: bold; }
 
-        /* Combat Text */
-        .damage-popup { position: absolute; color: white; font-weight: 900; pointer-events: none; animation: floatUp 0.6s ease-out forwards; }
-        @keyframes floatUp { to { transform: translateY(-50px); opacity: 0; } }
-
-        #boss-warning {
-            position: absolute; top: 50%; width: 100%; text-align: center;
-            font-size: 60px; color: var(--blood); display: none; text-shadow: 0 0 30px var(--blood);
-            animation: pulse 0.5s infinite;
+        /* SKILL TREE (UPGRADE) */
+        #upgrade-menu {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
         }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .cards { display: flex; gap: 20px; margin-top: 30px; }
+        .card {
+            width: 280px; background: #0a0c14; border: 2px solid #1a1e2e; border-radius: 15px;
+            padding: 30px; text-align: center; cursor: pointer; transition: 0.3s;
+        }
+        .card:hover { border-color: var(--neon); transform: translateY(-10px); box-shadow: 0 0 30px rgba(0,242,255,0.2); }
+        .card h2 { color: var(--neon); text-transform: uppercase; margin-bottom: 15px; }
+        .card p { color: #888; line-height: 1.5; font-size: 14px; }
+
+        /* MESAJLAR */
+        #announcer {
+            position: absolute; top: 30%; width: 100%; text-align: center;
+            font-size: 80px; font-weight: 700; color: #fff; text-shadow: 0 0 20px var(--neon);
+            pointer-events: none; opacity: 0; transition: 0.5s;
+        }
+
+        #inventory-btn { pointer-events: all; cursor: pointer; color: var(--neon); border: 1px solid var(--neon); padding: 5px 10px; }
     </style>
 </head>
 <body>
 
-<div id="ui-container">
+<div id="main-hud">
     <div class="hud-top">
-        <div class="health-module">
-            <div style="margin-bottom: 5px; font-size: 12px; letter-spacing: 2px;">BİLEŞEN DURUMU</div>
-            <div class="bar-bg"><div id="hp-fill"></div></div>
-            <div style="margin: 15px 0 5px 0; font-size: 12px; letter-spacing: 2px;">SENKRONİZASYON (LVL <span id="lvl-count">1</span>)</div>
-            <div class="bar-bg"><div id="xp-fill"></div></div>
-            <div class="stats-grid">
-                <div>HASAR: <span id="stat-dmg">40</span></div>
-                <div>KRİTİK: <span id="stat-crit">5%</span></div>
-                <div>HIZ: <span id="stat-spd">1.0x</span></div>
-                <div>DASH: <span id="stat-dash">HAZIR</span></div>
-            </div>
+        <div class="status">
+            <div style="font-size: 14px; letter-spacing: 2px;">PILOT_STATUS: ACTIVE</div>
+            <div class="bar-wrapper"><div id="hp-bar" class="bar-inner"></div></div>
+            <div style="font-size: 14px; margin-top: 10px; letter-spacing: 2px;">SYNC_LEVEL: <span id="lvl-ui">1</span></div>
+            <div class="bar-wrapper"><div id="xp-bar" class="bar-inner"></div></div>
         </div>
-        <div style="text-align: right;">
-            <div style="font-size: 40px; font-weight: 900; color: var(--blood);" id="kill-ui">000</div>
-            <div style="font-size: 10px; color: #444;">İMHA EDİLEN BİRİMLER</div>
+        <div class="counters" style="text-align: right;">
+            <div style="font-size: 30px; color: #ff0055;" id="kill-ui">000</div>
+            <div style="font-size: 12px; color: #555;">KILLED_HOSTILES</div>
+            <div id="inventory-btn" onclick="togglePanel()">STATS [TAB]</div>
         </div>
     </div>
 </div>
 
-<div id="boss-warning">TEHLİKE: BOSS GELİYOR</div>
-
-<div id="upgrade-screen">
-    <h1 style="letter-spacing: 10px; color: #fff;">SİSTEM GELİŞTİRME</h1>
-    <div class="card-wrapper" id="card-container"></div>
+<div id="char-panel">
+    <h3 style="color: var(--neon); margin: 0 0 10px 0;">CORE_STATS</h3>
+    <div class="stat-row">Damage: <span class="stat-val" id="st-dmg">45</span></div>
+    <div class="stat-row">Fire Rate: <span class="stat-val" id="st-rate">0.4s</span></div>
+    <div class="stat-row">Speed: <span class="stat-val" id="st-spd">4.0</span></div>
+    <div class="stat-row">Crit: <span class="stat-val" id="st-crit">5%</span></div>
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<div id="announcer">WAVE 1</div>
+
+<div id="upgrade-menu">
+    <h1 style="font-size: 50px; letter-spacing: 15px;">EVOLUTION_AVAILABLE</h1>
+    <div class="cards" id="upgrade-cards"></div>
+</div>
+
+<canvas id="game"></canvas>
 
 <script>
-/** * PROFESSIONAL GAME ENGINE CORE 
+/**
+ * OYUN MOTORU YAPISI (Advanced Modular Pattern)
  */
-const canvas = document.getElementById('gameCanvas');
+const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const state = {
-    p: null, enemies: [], bullets: [], particles: [], gems: [],
-    keys: {}, mouse: {x:0, y:0, down:false},
-    wave: 1, kills: 0, frame: 0, shake: 0,
+const Game = {
+    frame: 0,
+    wave: 1,
+    kills: 0,
     isPaused: false,
-    lastWaveTime: Date.now()
+    shake: 0,
+    entities: { player: null, enemies: [], bullets: [], items: [], fx: [] },
+    config: {
+        enemyBaseHp: 60,
+        spawnRate: 120,
+        nightMode: false
+    }
 };
-
-// --- CLASSES ---
 
 class Player {
     constructor() {
         this.x = canvas.width/2; this.y = canvas.height/2;
-        this.r = 18; this.hp = 100; this.maxHp = 100;
+        this.r = 20; this.hp = 100; this.maxHp = 100;
         this.lvl = 1; this.xp = 0; this.nextXp = 100;
-        this.speed = 4.5; this.dashCooldown = 0;
-        this.baseDmg = 40; this.critChance = 0.05;
-        this.fireRate = 350; this.lastFire = 0;
-        this.weaponMode = 'SINGLE'; // SINGLE, TRIPLE, BARRAGE
-    }
-
-    draw() {
-        const angle = Math.atan2(state.mouse.y - this.y, state.mouse.x - this.x);
-        
-        // Dinamik Işık Efekti
-        const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 150);
-        grad.addColorStop(0, 'rgba(0, 242, 255, 0.15)');
-        grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0, canvas.width, canvas.height);
-
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(angle);
-        
-        // Oyuncu Modeli
-        ctx.shadowBlur = 15; ctx.shadowColor = '#00f2ff';
-        ctx.strokeStyle = '#00f2ff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(15, 0); ctx.lineTo(-10, -12); ctx.lineTo(-10, 12); ctx.closePath();
-        ctx.stroke();
-        
-        // Motor Işığı
-        ctx.fillStyle = '#ff00ff';
-        ctx.fillRect(-15, -4, 4, 8);
-        ctx.restore();
+        this.stats = { dmg: 45, rate: 350, spd: 4.5, crit: 0.08, projectiles: 1 };
+        this.lastShot = 0;
     }
 
     update() {
-        // Hareket
-        let vx = 0, vy = 0;
-        if(state.keys['w']) vy = -this.speed;
-        if(state.keys['s']) vy = this.speed;
-        if(state.keys['a']) vx = -this.speed;
-        if(state.keys['d']) vx = this.speed;
-        
-        this.x += vx; this.y += vy;
-        
-        // Dash (Space)
-        if(state.keys[' '] && this.dashCooldown <= 0) {
-            this.x += vx * 20; this.y += vy * 20;
-            this.dashCooldown = 100;
-            state.shake = 15;
-            for(let i=0; i<20; i++) state.particles.push(new Particle(this.x, this.y, '#fff'));
-        }
-        if(this.dashCooldown > 0) this.dashCooldown--;
+        let mx = 0, my = 0;
+        if (keys['w']) my -= this.stats.spd;
+        if (keys['s']) my += this.stats.spd;
+        if (keys['a']) mx -= this.stats.spd;
+        if (keys['d']) mx += this.stats.spd;
+        this.x += mx; this.y += my;
 
-        if(state.mouse.down) this.shoot();
+        if (mouse.down) this.shoot();
         this.draw();
+    }
+
+    draw() {
+        const angle = Math.atan2(mouse.y - this.y, mouse.x - this.x);
+        
+        // Işık Hüzmesi
+        ctx.save();
+        const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 250);
+        g.addColorStop(0, 'rgba(0, 242, 255, 0.08)');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.fillRect(0,0, canvas.width, canvas.height);
+
+        ctx.translate(this.x, this.y);
+        ctx.rotate(angle);
+        
+        // Gövde
+        ctx.shadowBlur = 20; ctx.shadowColor = '#00f2ff';
+        ctx.strokeStyle = '#00f2ff';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(15, 0); ctx.lineTo(-12, -15); ctx.lineTo(-12, 15); ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
     }
 
     shoot() {
         const now = Date.now();
-        if(now - this.lastFire > this.fireRate) {
-            const angle = Math.atan2(state.mouse.y - this.y, state.mouse.x - this.x);
+        if (now - this.lastShot > this.stats.rate) {
+            Game.shake = 5;
+            const angle = Math.atan2(mouse.y - this.y, mouse.x - this.x);
             
-            if(this.weaponMode === 'SINGLE') {
-                this.createBullet(angle);
-            } else if(this.weaponMode === 'TRIPLE') {
-                this.createBullet(angle);
-                this.createBullet(angle - 0.2);
-                this.createBullet(angle + 0.2);
+            for(let i=0; i<this.stats.projectiles; i++) {
+                const offset = (i - (this.stats.projectiles-1)/2) * 0.15;
+                Game.entities.bullets.push(new Bullet(this.x, this.y, angle + offset, this.stats.dmg, Math.random() < this.stats.crit));
             }
-            
-            this.lastFire = now;
-            state.shake = 4;
+            this.lastShot = now;
         }
-    }
-
-    createBullet(angle) {
-        let isCrit = Math.random() < this.critChance;
-        let dmg = isCrit ? this.baseDmg * 2 : this.baseDmg;
-        state.bullets.push(new Bullet(this.x, this.y, angle, dmg, isCrit));
     }
 }
 
 class Enemy {
-    constructor(type = 'STALKER') {
-        const edge = Math.floor(Math.random()*4);
-        if(edge==0) { this.x = Math.random()*canvas.width; this.y = -50; }
-        else if(edge==1) { this.x = canvas.width+50; this.y = Math.random()*canvas.height; }
-        else if(edge==2) { this.x = Math.random()*canvas.width; this.y = canvas.height+50; }
-        else { this.x = -50; this.y = Math.random()*canvas.height; }
-
-        this.type = type;
-        this.hp = 60 + (state.wave * 25);
+    constructor(isBoss = false) {
+        this.isBoss = isBoss;
+        const ang = Math.random() * Math.PI * 2;
+        const dist = canvas.width;
+        this.x = canvas.width/2 + Math.cos(ang) * dist;
+        this.y = canvas.height/2 + Math.sin(ang) * dist;
+        
+        this.r = isBoss ? 65 : 22;
+        this.hp = (isBoss ? 2000 : 60) * (1 + Game.wave * 0.3);
         this.maxHp = this.hp;
-        this.speed = 2 + (Math.random() * state.wave * 0.2);
-        this.r = type === 'BOSS' ? 60 : 20;
-        if(type === 'BOSS') this.hp *= 10;
+        this.speed = isBoss ? 1.5 : 2.5 + Math.random();
+        this.color = isBoss ? '#ff0055' : '#111';
     }
 
     update() {
-        const angle = Math.atan2(state.p.y - this.y, state.p.x - this.x);
+        const angle = Math.atan2(Game.entities.player.y - this.y, Game.entities.player.x - this.x);
         this.x += Math.cos(angle) * this.speed;
         this.y += Math.sin(angle) * this.speed;
 
-        // Çizim
         ctx.save();
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = this.type === 'BOSS' ? '#ff004c' : '#76ff03';
-        ctx.fillStyle = this.type === 'BOSS' ? '#ff004c' : '#111';
-        ctx.strokeStyle = this.type === 'BOSS' ? '#fff' : '#76ff03';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+        ctx.shadowBlur = 10; ctx.shadowColor = this.isBoss ? '#ff0055' : '#76ff03';
+        ctx.strokeStyle = this.isBoss ? '#ff0055' : '#76ff03';
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
         ctx.fill(); ctx.stroke();
+        
+        // HP Bar
+        ctx.fillStyle = '#222';
+        ctx.fillRect(this.x - this.r, this.y - this.r - 12, this.r*2, 5);
+        ctx.fillStyle = '#ff0055';
+        ctx.fillRect(this.x - this.r, this.y - this.r - 12, (this.r*2) * (this.hp/this.maxHp), 5);
         ctx.restore();
     }
 }
 
 class Bullet {
-    constructor(x, y, angle, dmg, isCrit) {
+    constructor(x, y, ang, dmg, crit) {
         this.x = x; this.y = y;
-        this.vx = Math.cos(angle) * 15;
-        this.vy = Math.sin(angle) * 15;
-        this.dmg = dmg; this.isCrit = isCrit;
+        this.dmg = crit ? dmg * 2.5 : dmg;
+        this.crit = crit;
+        this.vx = Math.cos(ang) * 16;
+        this.vy = Math.sin(ang) * 16;
         this.life = 100;
     }
     update() {
         this.x += this.vx; this.y += this.vy;
-        ctx.fillStyle = this.isCrit ? '#ff00ff' : '#00f2ff';
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.isCrit ? 6 : 3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = this.crit ? '#ff00ff' : '#00f2ff';
+        ctx.shadowBlur = this.crit ? 15 : 0;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.crit ? 6 : 4, 0, Math.PI*2); ctx.fill();
         this.life--;
     }
 }
 
 class Particle {
     constructor(x, y, color) {
-        this.x = x; this.y = y; this.color = color;
-        this.vx = (Math.random()-0.5)*10;
-        this.vy = (Math.random()-0.5)*10;
-        this.alpha = 1;
+        this.x = x; this.y = y; this.c = color;
+        this.v = {x: (Math.random()-0.5)*10, y: (Math.random()-0.5)*10};
+        this.a = 1;
     }
     update() {
-        this.x += this.vx; this.y += this.vy;
-        this.alpha -= 0.02;
-        ctx.globalAlpha = this.alpha;
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, 2, 2);
+        this.x += this.v.x; this.y += this.v.y; this.a -= 0.02;
+        ctx.globalAlpha = this.a;
+        ctx.fillStyle = this.c;
+        ctx.fillRect(this.x, this.y, 3, 3);
         ctx.globalAlpha = 1;
     }
 }
 
-// --- ENGINE FUNCTIONS ---
+/**
+ * MANTIK DÖNGÜSÜ
+ */
 
-function spawnManager() {
-    if(state.isPaused) return;
-    
-    // Zorluk eğrisi
-    if(state.frame % Math.max(20, 100 - state.wave * 5) === 0) {
-        state.enemies.push(new Enemy());
+function spawnWave() {
+    announce(`WAVE ${Game.wave}`);
+    const count = 5 + Game.wave * 4;
+    for(let i=0; i<count; i++) {
+        setTimeout(() => Game.entities.enemies.push(new Enemy()), i * 300);
     }
+    if(Game.wave % 5 === 0) Game.entities.enemies.push(new Enemy(true));
+}
 
-    // Boss kontrolü
-    if(state.wave % 5 === 0 && !state.enemies.some(e => e.type === 'BOSS')) {
-        document.getElementById('boss-warning').style.display = 'block';
-        setTimeout(() => {
-            state.enemies.push(new Enemy('BOSS'));
-            document.getElementById('boss-warning').style.display = 'none';
-        }, 2000);
-    }
+function announce(txt) {
+    const el = document.getElementById('announcer');
+    el.innerText = txt; el.style.opacity = 1;
+    setTimeout(() => el.style.opacity = 0, 2000);
 }
 
 function showUpgradeMenu() {
-    state.isPaused = true;
-    const container = document.getElementById('card-container');
-    const screen = document.getElementById('upgrade-screen');
-    container.innerHTML = '';
-    screen.style.display = 'flex';
-
-    const pool = [
-        { t: "OVERCLOCK", d: "Saldırı hızını %30 artırır.", f: () => state.p.fireRate *= 0.7 },
-        { t: "PLAZMA YAYILIMI", d: "Aynı anda 3 mermi ateşle.", f: () => state.p.weaponMode = 'TRIPLE' },
-        { t: "KRİTİK HATA", d: "Kritik vuruş şansını %15 artırır.", f: () => state.p.critChance += 0.15 },
-        { t: "RE-GEN", d: "Maksimum canı artırır ve yeniler.", f: () => { state.p.maxHp += 40; state.p.hp = state.p.maxHp; }},
-        { t: "KİNETİK HIZ", d: "Hareket hızını kalıcı olarak artırır.", f: () => state.p.speed += 1.2 }
+    Game.isPaused = true;
+    const cards = [
+        { t: "HEAVY BOLTS", d: "Hasarı %40 artırır ama hızı %10 azaltır.", f: () => { Game.entities.player.stats.dmg *= 1.4; Game.entities.player.stats.spd *= 0.9; }},
+        { t: "SPLIT SHOT", d: "Aynı anda ekstra mermi ateşler.", f: () => { Game.entities.player.stats.projectiles++; }},
+        { t: "OVERCLOCK", d: "Ateş hızını %25 artırır.", f: () => { Game.entities.player.stats.rate *= 0.75; }},
+        { t: "NANO-REPAIR", d: "Maksimum canı 50 artırır ve tamir eder.", f: () => { Game.entities.player.maxHp += 50; Game.entities.player.hp = Game.entities.player.maxHp; }},
+        { t: "DEADLY FOCUS", d: "Kritik vuruş şansını %15 artırır.", f: () => { Game.entities.player.stats.crit += 0.15; }}
     ];
 
-    pool.sort(() => 0.5 - Math.random()).slice(0, 3).forEach(upg => {
+    const menu = document.getElementById('upgrade-menu');
+    const container = document.getElementById('upgrade-cards');
+    container.innerHTML = '';
+    menu.style.display = 'flex';
+
+    cards.sort(() => Math.random() - 0.5).slice(0, 3).forEach(c => {
         const div = document.createElement('div');
-        div.className = 'upgrade-card';
-        div.innerHTML = `<div class="rarity">LEGENDARY</div><h3>${upg.t}</h3><p>${upg.d}</p>`;
+        div.className = 'card';
+        div.innerHTML = `<h2>${c.t}</h2><p>${c.d}</p>`;
         div.onclick = () => {
-            upg.f();
-            state.isPaused = false;
-            screen.style.display = 'none';
-            updateUI();
+            c.f(); Game.isPaused = false; menu.style.display = 'none'; spawnWave();
         };
         container.appendChild(div);
     });
 }
 
-function updateUI() {
-    document.getElementById('hp-fill').style.width = (state.p.hp / state.p.maxHp * 100) + '%';
-    document.getElementById('xp-fill').style.width = (state.p.xp / state.p.nextXp * 100) + '%';
-    document.getElementById('kill-ui').innerText = state.kills.toString().padStart(3, '0');
-    document.getElementById('lvl-count').innerText = state.p.lvl;
-    document.getElementById('stat-dmg').innerText = state.p.baseDmg;
-    document.getElementById('stat-crit').innerText = (state.p.critChance * 100).toFixed(0) + '%';
-    document.getElementById('stat-spd').innerText = (state.p.speed / 4.5).toFixed(1) + 'x';
-    document.getElementById('stat-dash').innerText = state.p.dashCooldown > 0 ? 'YÜKLENİYOR' : 'HAZIR';
-}
-
-function gameLoop() {
-    if(!state.isPaused) {
-        // Clear & Shake
-        ctx.fillStyle = '#020202';
+function loop() {
+    if(!Game.isPaused) {
+        ctx.fillStyle = 'rgba(3, 4, 10, 0.4)';
         ctx.fillRect(0,0, canvas.width, canvas.height);
-        
-        if(state.shake > 0) {
+
+        if(Game.shake > 0) {
             ctx.save();
-            ctx.translate((Math.random()-0.5)*state.shake, (Math.random()-0.5)*state.shake);
-            state.shake *= 0.9;
+            ctx.translate((Math.random()-0.5)*Game.shake, (Math.random()-0.5)*Game.shake);
+            Game.shake *= 0.9;
         }
 
-        spawnManager();
-        state.p.update();
+        Game.entities.player.update();
 
-        // Mermiler
-        state.bullets.forEach((b, bi) => {
+        // Mermi & Düşman Etkileşimi
+        Game.entities.bullets.forEach((b, bi) => {
             b.update();
-            if(b.life <= 0) state.bullets.splice(bi, 1);
+            if(b.life <= 0) Game.entities.bullets.splice(bi, 1);
             
-            state.enemies.forEach((en, ei) => {
-                const dist = Math.hypot(b.x - en.x, b.y - en.y);
-                if(dist < en.r) {
+            Game.entities.enemies.forEach((en, ei) => {
+                const d = Math.hypot(b.x - en.x, b.y - en.y);
+                if(d < en.r) {
                     en.hp -= b.dmg;
-                    state.bullets.splice(bi, 1);
-                    // Hit efekti
-                    for(let i=0; i<3; i++) state.particles.push(new Particle(b.x, b.y, b.isCrit ? '#ff00ff' : '#00f2ff'));
+                    Game.entities.bullets.splice(bi, 1);
+                    for(let i=0; i<5; i++) Game.entities.fx.push(new Particle(b.x, b.y, en.isBoss ? '#ff0055' : '#76ff03'));
                     
                     if(en.hp <= 0) {
-                        state.kills++;
-                        state.p.xp += 20;
-                        state.enemies.splice(ei, 1);
-                        if(state.p.xp >= state.p.nextXp) {
-                            state.p.lvl++;
-                            state.p.xp = 0;
-                            state.p.nextXp *= 1.5;
+                        Game.kills++;
+                        Game.entities.player.xp += en.isBoss ? 500 : 25;
+                        Game.entities.enemies.splice(ei, 1);
+                        if(Game.entities.player.xp >= Game.entities.player.nextXp) {
+                            Game.entities.player.lvl++;
+                            Game.entities.player.xp = 0;
+                            Game.entities.player.nextXp *= 1.4;
                             showUpgradeMenu();
                         }
                     }
@@ -358,42 +325,66 @@ function gameLoop() {
             });
         });
 
-        // Düşmanlar
-        state.enemies.forEach((en, ei) => {
+        // Düşman & Oyuncu Etkileşimi
+        Game.entities.enemies.forEach((en, ei) => {
             en.update();
-            const dist = Math.hypot(en.x - state.p.x, en.y - state.p.y);
-            if(dist < en.r + state.p.r) {
-                state.p.hp -= 0.4;
-                state.shake = 10;
-                if(state.p.hp <= 0) {
-                    alert("SİSTEM ÇÖKTÜ. SKOR: " + state.kills);
+            const d = Math.hypot(en.x - Game.entities.player.x, en.y - Game.entities.player.y);
+            if(d < en.r + Game.entities.player.r) {
+                Game.entities.player.hp -= 0.5;
+                if(Game.entities.player.hp <= 0) {
+                    alert("PROTOCOL FAILED. TOTAL KILLS: " + Game.kills);
                     location.reload();
                 }
             }
         });
 
-        // Parçacıklar
-        state.particles.forEach((p, pi) => {
-            p.update();
-            if(p.alpha <= 0) state.particles.splice(pi, 1);
+        Game.entities.fx.forEach((f, i) => {
+            f.update();
+            if(f.a <= 0) Game.entities.fx.splice(i, 1);
         });
 
-        if(state.shake > 0) ctx.restore();
-        state.frame++;
+        if(Game.entities.enemies.length === 0 && !Game.isPaused) {
+            Game.wave++;
+            spawnWave();
+        }
+
         updateUI();
+        if(Game.shake > 0) ctx.restore();
     }
-    requestAnimationFrame(gameLoop);
+    Game.frame++;
+    requestAnimationFrame(loop);
 }
 
-// Events
-window.onkeydown = e => state.keys[e.key.toLowerCase()] = true;
-window.onkeyup = e => state.keys[e.key.toLowerCase()] = false;
-window.onmousemove = e => { state.mouse.x = e.clientX; state.mouse.y = e.clientY; };
-window.onmousedown = () => state.mouse.down = true;
-window.onmouseup = () => state.mouse.down = false;
+function updateUI() {
+    const p = Game.entities.player;
+    document.getElementById('hp-bar').style.width = (p.hp / p.maxHp * 100) + '%';
+    document.getElementById('xp-bar').style.width = (p.xp / p.nextXp * 100) + '%';
+    document.getElementById('kill-ui').innerText = Game.kills.toString().padStart(3, '0');
+    document.getElementById('lvl-ui').innerText = p.lvl;
+    
+    document.getElementById('st-dmg').innerText = p.stats.dmg.toFixed(0);
+    document.getElementById('st-rate').innerText = (p.stats.rate/1000).toFixed(2) + 's';
+    document.getElementById('st-spd').innerText = p.stats.spd.toFixed(1);
+    document.getElementById('st-crit').innerText = (p.stats.crit*100).toFixed(0) + '%';
+}
 
-state.p = new Player();
-gameLoop();
+function togglePanel() {
+    const p = document.getElementById('char-panel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+// Kontroller
+const keys = {};
+const mouse = {x:0, y:0, down:false};
+window.onkeydown = e => { keys[e.key.toLowerCase()] = true; if(e.key === 'Tab') { e.preventDefault(); togglePanel(); } };
+window.onkeyup = e => keys[e.key.toLowerCase()] = false;
+window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
+window.onmousedown = () => mouse.down = true;
+window.onmouseup = () => mouse.down = false;
+
+Game.entities.player = new Player();
+spawnWave();
+loop();
 </script>
 </body>
 </html>
