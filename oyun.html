@@ -2,337 +2,364 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Derby Legends: Pro Tycoon</title>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+    <title>Gemini-Dash | Pro Platformer</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@800&family=Oswald:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --neon-gold: #ffcc00;
-            --neon-blue: #00d4ff;
-            --deep-red: #ff2e63;
-            --ui-dark: #0f172a;
-            --success: #00ff88;
+            --bg: #050505;
+            --primary: #00f2ff;
+            --hazard: #ff004c;
+            --finish: #00ff88;
         }
 
-        body, html { 
-            margin: 0; padding: 0; overflow: hidden; 
-            background: #020617; font-family: 'Ubuntu', sans-serif; color: #f8fafc;
+        body, html { margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: 'JetBrains Mono', monospace; }
+        canvas { display: block; filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.2)); }
+
+        /* UI Katmanları */
+        #ui {
+            position: absolute; inset: 0; pointer-events: none;
+            padding: 30px; display: flex; justify-content: space-between;
+            color: #fff; z-index: 100;
         }
 
-        /* --- PROFESYONEL HUD --- */
-        #ui-container { position: absolute; inset: 0; pointer-events: none; z-index: 100; }
-        .pointer { pointer-events: all; }
-
-        .top-nav {
-            background: rgba(15, 23, 42, 0.9);
-            border-bottom: 2px solid var(--neon-gold);
-            padding: 15px 50px; display: flex; justify-content: space-between; align-items: center;
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px; border-left: 4px solid var(--primary);
+            font-size: 18px; text-transform: uppercase;
         }
 
-        .balance-tag { font-size: 28px; font-weight: 700; color: var(--neon-gold); filter: drop-shadow(0 0 5px var(--neon-gold)); }
-
-        /* ANA PANEL */
-        #garage-panel {
-            position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%);
-            width: 900px; background: var(--ui-dark); border-radius: 24px;
-            padding: 40px; box-shadow: 0 0 100px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);
+        #level-counter { color: var(--primary); font-size: 32px; font-weight: 900; }
+        
+        #death-screen {
+            position: fixed; inset: 0; background: rgba(255, 0, 76, 0.2);
+            display: none; justify-content: center; align-items: center;
+            font-size: 80px; font-family: 'Oswald'; color: #fff; z-index: 1000;
         }
 
-        .grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; }
-
-        /* STATS & UPGRADES */
-        .card { background: rgba(255,255,255,0.03); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
-        .stat-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .bar-container { height: 12px; background: #1e293b; border-radius: 6px; margin: 10px 0; overflow: hidden; }
-        .bar-fill { height: 100%; transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
-        /* YARIŞ MEKANİKLERİ */
-        #race-field {
-            position: fixed; inset: 0; background: #064e3b; display: none;
-            perspective: 1000px;
+        .controls-hint {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.3); font-size: 12px;
         }
-        .turf {
-            height: 100%; width: 100%; 
-            background: linear-gradient(90deg, #065f46 50%, #064e3b 50%);
-            background-size: 200px 100%;
-        }
-
-        .horse-unit {
-            position: absolute; width: 120px; height: 80px; 
-            transition: left 0.1s linear; transform-style: preserve-3d;
-        }
-
-        /* KAMÇI BUTONU (Yarış Anında) */
-        #action-bar {
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 20px;
-        }
-
-        .whip-btn {
-            width: 100px; height: 100px; border-radius: 50%; background: var(--deep-red);
-            border: 4px solid #fff; color: #fff; font-weight: 900; cursor: pointer;
-            box-shadow: 0 10px 20px rgba(255, 46, 99, 0.4);
-        }
-
-        .whip-btn:active { transform: scale(0.9); background: #fff; color: var(--deep-red); }
-
-        /* HAVA DURUMU PANELİ */
-        .weather-tag { font-size: 14px; padding: 5px 15px; border-radius: 20px; background: #1e293b; margin-top: 10px; display: inline-block; }
-
-        .btn-pro {
-            background: linear-gradient(135deg, var(--neon-gold), #ffaa00);
-            color: #000; border: none; padding: 15px 40px; border-radius: 12px;
-            font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
-        }
-
-        .btn-pro:hover { filter: brightness(1.2); transform: translateY(-2px); }
-
-        #fx-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
     </style>
 </head>
 <body>
 
-<div id="ui-container">
-    <div class="top-nav">
-        <div class="balance-tag">🪙 <span id="gold-ui">1500</span></div>
-        <div id="weather-ui" class="weather-tag">☁️ HAVA: BULUTLU</div>
-        <div style="font-family: 'Oswald'; font-size: 20px; color: var(--neon-blue);">PRO DERBY LEGENDS</div>
+<div id="ui">
+    <div class="stat-box">
+        LEVEL <span id="level-counter">1</span><br>
+        <small id="difficulty-tag" style="color: #666;">EASY</small>
     </div>
-
-    <div id="garage-panel" class="pointer">
-        <div class="grid">
-            <div class="card">
-                <div class="stat-header">
-                    <h2 style="margin:0">SAF KAN SAVAŞÇI</h2>
-                    <span id="horse-lvl" style="color:var(--neon-gold)">LVL 1</span>
-                </div>
-
-                <div style="margin-bottom: 25px;">
-                    <div style="display:flex; justify-content:space-between; font-size:12px"><span>HIZ (MAX KM/H)</span> <span id="val-speed">40</span></div>
-                    <div class="bar-container"><div id="bar-speed" class="bar-fill" style="width:40%; background:var(--neon-blue)"></div></div>
-                    <button class="btn-pro pointer" style="padding:5px 15px; font-size:10px" onclick="Game.upgrade('speed')">GÜÇLENDİR (300 🪙)</button>
-                </div>
-
-                <div style="margin-bottom: 25px;">
-                    <div style="display:flex; justify-content:space-between; font-size:12px"><span>DAYANIKLILIK (STAMINA)</span> <span id="val-stam">100</span></div>
-                    <div class="bar-container"><div id="bar-stam" class="bar-fill" style="width:50%; background:var(--success)"></div></div>
-                    <button class="btn-pro pointer" style="padding:5px 15px; font-size:10px" onclick="Game.upgrade('stamina')">GÜÇLENDİR (400 🪙)</button>
-                </div>
-            </div>
-
-            <div class="card" style="text-align:center">
-                <div style="font-size: 14px; color: #888;">FORM DURUMU</div>
-                <div id="moral-emoji" style="font-size: 50px; margin: 10px 0;">🔥</div>
-                <p id="moral-text" style="font-size: 12px;">Atın çok enerjik! Yarışlarda +%10 hız bonusu alır.</p>
-                <hr style="border:0; border-top: 1px solid #333; margin: 20px 0;">
-                <button class="btn-pro pointer" style="width:100%" onclick="Game.prepareRace()">BÜYÜK YARIŞA GİR (200 🪙)</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="action-bar" class="hidden">
-        <button class="whip-btn pointer" onclick="Game.applyWhip()">KAMÇI!</button>
-        <div style="background:rgba(0,0,0,0.8); padding:10px 30px; border-radius:20px;">
-            <div style="font-size:10px">KAMÇI ENERJİSİ</div>
-            <div class="bar-container" style="width:150px; height:6px;"><div id="whip-energy" class="bar-fill" style="width:100%; background:var(--deep-red)"></div></div>
-        </div>
+    <div class="stat-box" style="text-align: right; border-left: none; border-right: 4px solid var(--finish);">
+        DEATHS: <span id="death-count">0</span><br>
+        <small id="timer">00:00.00</small>
     </div>
 </div>
 
-<div id="race-field">
-    <div class="turf" id="turf-bg"></div>
-    <div id="horse-lanes"></div>
-</div>
+<div id="death-screen">WASTED</div>
+<div class="controls-hint">WASD / OK TUŞLARI: HAREKET | R: RESET | SEVİYELER 100'E KADAR ZORLAŞIR</div>
 
-<canvas id="fx-canvas"></canvas>
-
-<div id="finish-modal" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:200; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-    <h1 id="rank-text" style="font-size:80px; font-family:'Oswald'; color:var(--neon-gold)">1. OLDUN!</h1>
-    <p id="payout-text" style="font-size:24px">KAZANCIN: 1000 🪙</p>
-    <button class="btn-pro pointer" style="margin-top:30px" onclick="Game.closeResults()">AHIRA GERİ DÖN</button>
-</div>
+<canvas id="gameCanvas"></canvas>
 
 <script>
 /**
- * DERBY LEGENDS: ENGINE V3.0 PRO
+ * GEMINI-DASH PRO ENGINE
+ * 100 SEVİYE DİNAMİK ZORLUK MOTORU
  */
-const Game = {
-    gold: 1500,
-    horse: { speed: 40, stamina: 100, level: 1, energy: 100, moral: 1.1 },
-    weather: "Bulutlu",
-    isRacing: false,
-    trackDist: 10000,
-    playerPos: 0,
-    rivals: [],
-    whipEnergy: 100,
 
-    init() {
-        this.updateUI();
-        this.changeWeather();
-    },
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const dCount = document.getElementById('death-count');
+const lCount = document.getElementById('level-counter');
 
-    changeWeather() {
-        const list = ["Güneşli", "Yağmurlu", "Fırtınalı", "Bulutlu"];
-        this.weather = list[Math.floor(Math.random()*list.length)];
-        const emojis = { "Güneşli": "☀️", "Yağmurlu": "🌧️", "Fırtınalı": "⚡", "Bulutlu": "☁️" };
-        document.getElementById('weather-ui').innerText = emojis[this.weather] + " HAVA: " + this.weather.toUpperCase();
-    },
-
-    upgrade(type) {
-        let cost = type === 'speed' ? 300 : 400;
-        if(this.gold >= cost) {
-            this.gold -= cost;
-            this.horse[type] += 5;
-            this.horse.level++;
-            this.updateUI();
-            this.playAudio(600, 'square', 0.1);
-        }
-    },
-
-    prepareRace() {
-        if(this.gold < 200) return;
-        this.gold -= 200;
-        this.isRacing = true;
-        this.playerPos = 0;
-        this.whipEnergy = 100;
-        
-        document.getElementById('garage-panel').classList.add('hidden');
-        document.getElementById('race-field').style.display = 'block';
-        document.getElementById('action-bar').classList.remove('hidden');
-        
-        this.setupLanes();
-        this.raceLoop();
-    },
-
-    setupLanes() {
-        const container = document.getElementById('horse-lanes');
-        container.innerHTML = '';
-        this.rivals = [];
-        
-        const laneH = window.innerHeight / 6;
-        for(let i=0; i<6; i++) {
-            const lane = document.createElement('div');
-            lane.style.position = 'absolute';
-            lane.style.top = (i * laneH) + 'px';
-            lane.style.width = '100%';
-            lane.style.height = laneH + 'px';
-            lane.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
-            
-            const horse = document.createElement('div');
-            horse.className = 'horse-unit';
-            horse.style.backgroundColor = i === 0 ? 'var(--neon-gold)' : '#334155';
-            horse.style.borderRadius = '8px';
-            horse.style.top = '20px';
-            
-            lane.appendChild(horse);
-            container.appendChild(lane);
-            
-            if(i === 0) {
-                this.playerEl = horse;
-            } else {
-                this.rivals.push({
-                    el: horse,
-                    pos: 0,
-                    speed: (this.horse.speed * 0.8) + Math.random() * 15,
-                    power: 0
-                });
-            }
-        }
-    },
-
-    applyWhip() {
-        if(this.whipEnergy >= 20) {
-            this.whipEnergy -= 20;
-            this.horse.energy += 15; // Anlık hız patlaması
-            this.playAudio(200, 'sawtooth', 0.05);
-            this.updateUI();
-        }
-    },
-
-    raceLoop() {
-        if(!this.isRacing) return;
-
-        // Arka plan kaydırma efekti (Parallax)
-        const turf = document.getElementById('turf-bg');
-        turf.style.backgroundPositionX = (-this.playerPos * 2) + "px";
-
-        // Oyuncu Hareket Mantığı
-        let weatherPenalty = (this.weather === "Yağmurlu" || this.weather === "Fırtınalı") ? 0.8 : 1.0;
-        let baseSpeed = (this.horse.speed / 10) * this.horse.moral * weatherPenalty;
-        
-        // Kamçı etkisi sönümlenmesi
-        this.horse.energy *= 0.95;
-        this.playerPos += baseSpeed + (this.horse.energy / 15);
-        
-        // Görsel Konumlandırma (Rakiplere göre farkı gösterir)
-        const screenW = window.innerWidth - 200;
-        this.playerEl.style.left = "100px"; // Oyuncu merkezde, rakipler ona göre geri/ileri gider
-
-        // Rakipleri oyuncuya göre konumlandır
-        this.rivals.forEach(r => {
-            r.pos += r.speed / 10;
-            let relativePos = 100 + (r.pos - this.playerPos);
-            r.el.style.left = relativePos + "px";
-            
-            // Eğer rakip bitişe ulaştıysa (Yarış biter)
-            if(r.pos >= this.trackDist) this.finishRace(false);
-        });
-
-        if(this.playerPos >= this.trackDist) {
-            this.finishRace(true);
-        } else {
-            // Kamçı enerjisi yavaşça dolar
-            if(this.whipEnergy < 100) this.whipEnergy += 0.1;
-            document.getElementById('whip-energy').style.width = this.whipEnergy + "%";
-            requestAnimationFrame(() => this.raceLoop());
-        }
-    },
-
-    finishRace(won) {
-        this.isRacing = false;
-        document.getElementById('finish-modal').classList.remove('hidden');
-        const rText = document.getElementById('rank-text');
-        const pText = document.getElementById('payout-text');
-        
-        if(won) {
-            rText.innerText = "1. OLDUN!";
-            rText.style.color = "var(--neon-gold)";
-            this.gold += 1000;
-            pText.innerText = "KAZANCIN: 1000 🪙";
-        } else {
-            rText.innerText = "ELENDİN!";
-            rText.style.color = "var(--deep-red)";
-            pText.innerText = "Rakipler seni geçti.";
-        }
-        this.updateUI();
-    },
-
-    closeResults() {
-        document.getElementById('finish-modal').classList.add('hidden');
-        document.getElementById('race-field').style.display = 'none';
-        document.getElementById('action-bar').classList.add('hidden');
-        document.getElementById('garage-panel').classList.remove('hidden');
-        this.changeWeather();
-    },
-
-    updateUI() {
-        document.getElementById('gold-ui').innerText = Math.floor(this.gold);
-        document.getElementById('val-speed').innerText = this.horse.speed;
-        document.getElementById('bar-speed').style.width = this.horse.speed + "%";
-        document.getElementById('val-stam').innerText = this.horse.stamina;
-        document.getElementById('bar-stam').style.width = (this.horse.stamina / 2) + "%";
-        document.getElementById('horse-lvl').innerText = "LVL " + this.horse.level;
-    },
-
-    playAudio(f, t, d) {
-        const ac = new (window.AudioContext || window.webkitAudioContext)();
-        const o = ac.createOscillator(); const g = ac.createGain();
-        o.type = t; o.frequency.value = f; g.gain.value = 0.1;
-        o.connect(g); g.connect(ac.destination);
-        o.start(); o.stop(ac.currentTime + d);
-    }
+// Oyun Ayarları
+const CONFIG = {
+    gravity: 0.25,
+    friction: 0.85,
+    accel: 0.6,
+    jump: -7.5,
+    tileSize: 40,
+    deathLimit: 0
 };
 
-Game.init();
+let game = {
+    level: 1,
+    deaths: 0,
+    player: null,
+    platforms: [],
+    hazards: [],
+    particles: [],
+    finishLine: null,
+    keys: {},
+    camera: { x: 0, y: 0 },
+    startTime: Date.now()
+};
+
+class Player {
+    constructor(x, y) {
+        this.x = x; this.y = y;
+        this.vx = 0; this.vy = 0;
+        this.w = 24; this.h = 24;
+        this.onGround = false;
+        this.color = "#00f2ff";
+        this.trail = [];
+    }
+
+    update() {
+        // Hareket Girdisi
+        if (game.keys['ArrowLeft'] || game.keys['a']) this.vx -= CONFIG.accel;
+        if (game.keys['ArrowRight'] || game.keys['d']) this.vx += CONFIG.accel;
+        
+        // Zıplama (Coyote Time & Buffer eklemesi yapılabilir)
+        if ((game.keys['ArrowUp'] || game.keys['w'] || game.keys[' ']) && this.onGround) {
+            this.vy = CONFIG.jump;
+            this.onGround = false;
+            createExplosion(this.x + 12, this.y + 24, "#fff", 5);
+        }
+
+        // Fizik Uygulama
+        this.vy += CONFIG.gravity;
+        this.vx *= CONFIG.friction;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Trail Efekti
+        this.trail.push({x: this.x, y: this.y, alpha: 0.5});
+        if(this.trail.length > 10) this.trail.shift();
+
+        // Çarpışma Kontrolü (Zemin/Platform)
+        this.onGround = false;
+        game.platforms.forEach(p => {
+            if (this.x < p.x + p.w && this.x + this.w > p.x && this.y < p.y + p.h && this.y + this.h > p.y) {
+                // Hangi yönden çarptı?
+                let overlapX = Math.min(this.x + this.w - p.x, p.x + p.w - this.x);
+                let overlapY = Math.min(this.y + this.h - p.y, p.y + p.h - this.y);
+
+                if (overlapX > overlapY) {
+                    if (this.vy > 0) { // Üstten çarptı
+                        this.y = p.y - this.h;
+                        this.vy = 0;
+                        this.onGround = true;
+                    } else { // Alttan çarptı
+                        this.y = p.y + p.h;
+                        this.vy = 0;
+                    }
+                } else {
+                    if (this.vx > 0) this.x = p.x - this.w;
+                    else this.x = p.x + p.w;
+                    this.vx = 0;
+                }
+            }
+        });
+
+        // Ölüm Kontrolü (Dikenler)
+        game.hazards.forEach(h => {
+            if (this.x < h.x + h.w - 5 && this.x + this.w > h.x + 5 && this.y < h.y + h.h && this.y + this.h > h.y + 5) {
+                die();
+            }
+        });
+
+        // Bitiş Kontrolü
+        if (this.x < game.finishLine.x + game.finishLine.w && this.x + this.w > game.finishLine.x && this.y < game.finishLine.y + game.finishLine.h && this.y + this.h > game.finishLine.y) {
+            nextLevel();
+        }
+
+        // Dünya dışına düşme
+        if (this.y > 2000) die();
+    }
+
+    draw() {
+        // Trail çizimi
+        this.trail.forEach((t, i) => {
+            ctx.fillStyle = `rgba(0, 242, 255, ${t.alpha * (i/10)})`;
+            ctx.fillRect(t.x - game.camera.x, t.y - game.camera.y, this.w, this.h);
+        });
+
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.fillRect(this.x - game.camera.x, this.y - game.camera.y, this.w, this.h);
+        ctx.shadowBlur = 0;
+    }
+}
+
+/**
+ * PRO LEVEL GENERATOR (1-100)
+ * Seviye ilerledikçe platformlar küçülür, dikenler artar.
+ */
+function buildLevel(num) {
+    game.platforms = [];
+    game.hazards = [];
+    game.particles = [];
+    
+    // Zorluk parametreleri
+    const difficulty = num / 100;
+    const gapMultiplier = 1 + (difficulty * 2);
+    
+    let curX = 100;
+    let curY = 500;
+
+    // Start Platform
+    game.platforms.push({x: 0, y: 550, w: 200, h: 40});
+    game.player = new Player(50, 500);
+
+    // Procedural Generation (Zorluk Odaklı)
+    for (let i = 0; i < 15 + (num * 2); i++) {
+        let pW = Math.max(30, 150 - (difficulty * 120));
+        let jumpX = 100 + (Math.random() * 50 * gapMultiplier);
+        let jumpY = (Math.random() - 0.5) * 150;
+
+        curX += jumpX + pW;
+        curY += jumpY;
+
+        game.platforms.push({x: curX, y: curY, w: pW, h: 20});
+
+        // Seviye 5'ten sonra diken ekle
+        if (num > 5 && Math.random() < 0.3 + (difficulty * 0.5)) {
+            game.hazards.push({x: curX + 10, y: curY - 15, w: pW - 20, h: 15});
+        }
+    }
+
+    // Finish
+    game.finishLine = {x: curX + 150, y: curY - 100, w: 60, h: 150};
+    
+    lCount.innerText = num;
+    document.getElementById('difficulty-tag').innerText = num < 30 ? "EASY" : (num < 70 ? "HARDCORE" : "INSANE");
+    document.getElementById('difficulty-tag').style.color = num < 30 ? "#00ff88" : (num < 70 ? "#ffcc00" : "#ff004c");
+}
+
+function die() {
+    game.deaths++;
+    dCount.innerText = game.deaths;
+    createExplosion(game.player.x, game.player.y, "#ff004c", 20);
+    
+    const ds = document.getElementById('death-screen');
+    ds.style.display = 'flex';
+    setTimeout(() => {
+        ds.style.display = 'none';
+        buildLevel(game.level);
+    }, 300);
+}
+
+function nextLevel() {
+    createExplosion(game.player.x, game.player.y, "#00ff88", 30);
+    game.level++;
+    if(game.level > 100) {
+        alert("TEBRİKLER! TÜM PARKURU BİTİRDİN!");
+        game.level = 1;
+    }
+    setTimeout(() => buildLevel(game.level), 100);
+}
+
+function createExplosion(x, y, color, count) {
+    for(let i=0; i<count; i++) {
+        game.particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            life: 1,
+            color: color
+        });
+    }
+}
+
+// Input Handling
+window.addEventListener('keydown', e => game.keys[e.key] = true);
+window.addEventListener('keyup', e => game.keys[e.key] = false);
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+function update() {
+    game.player.update();
+    
+    // Smooth Camera
+    game.camera.x += (game.player.x - canvas.width/2 - game.camera.x) * 0.1;
+    game.camera.y += (game.player.y - canvas.height/2 - game.camera.y) * 0.1;
+
+    // Particles
+    game.particles.forEach((p, i) => {
+        p.x += p.vx; p.y += p.vy;
+        p.life -= 0.02;
+        if(p.life <= 0) game.particles.splice(i, 1);
+    });
+
+    // Timer
+    let elapsed = (Date.now() - game.startTime) / 1000;
+    document.getElementById('timer').innerText = elapsed.toFixed(2);
+}
+
+function draw() {
+    ctx.fillStyle = "#050505";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Arka Plan Izgarası (Dinamik)
+    ctx.strokeStyle = "rgba(255,255,255,0.03)";
+    ctx.beginPath();
+    for(let i = -game.camera.x % 100; i < canvas.width; i += 100) {
+        ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height);
+    }
+    for(let i = -game.camera.y % 100; i < canvas.height; i += 100) {
+        ctx.moveTo(0, i); ctx.lineTo(canvas.width, i);
+    }
+    ctx.stroke();
+
+    ctx.save();
+    
+    // Platformlar
+    game.platforms.forEach(p => {
+        ctx.fillStyle = "#1e1e1e";
+        ctx.fillRect(p.x - game.camera.x, p.y - game.camera.y, p.w, p.h);
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.strokeRect(p.x - game.camera.x, p.y - game.camera.y, p.w, p.h);
+    });
+
+    // Tehlikeler (Dikenler)
+    game.hazards.forEach(h => {
+        ctx.fillStyle = "#ff004c";
+        ctx.beginPath();
+        let step = h.w / 5;
+        for(let i=0; i<=5; i++) {
+            let tx = h.x + (i * step);
+            if(i==0) ctx.moveTo(tx - game.camera.x, h.y + h.h - game.camera.y);
+            ctx.lineTo(tx - game.camera.x, h.y - game.camera.y);
+            ctx.lineTo(tx + (step/2) - game.camera.x, h.y + h.h - game.camera.y);
+        }
+        ctx.fill();
+    });
+
+    // Bitiş Kapısı
+    ctx.fillStyle = "rgba(0, 255, 136, 0.2)";
+    ctx.fillRect(game.finishLine.x - game.camera.x, game.finishLine.y - game.camera.y, game.finishLine.w, game.finishLine.h);
+    ctx.strokeStyle = "#00ff88";
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(game.finishLine.x - game.camera.x, game.finishLine.y - game.camera.y, game.finishLine.w, game.finishLine.h);
+    ctx.setLineDash([]);
+
+    // Particles
+    game.particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fillRect(p.x - game.camera.x, p.y - game.camera.y, 4, 4);
+    });
+    ctx.globalAlpha = 1;
+
+    game.player.draw();
+
+    ctx.restore();
+    
+    requestAnimationFrame(() => {
+        update();
+        draw();
+    });
+}
+
+// Başlat
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+buildLevel(1);
+draw();
 </script>
 </body>
 </html>
