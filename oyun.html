@@ -2,154 +2,298 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Dragon Lordz: Arena</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Lordz: Legacy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --gold: #f1c40f; --red: #e74c3c; --blue: #3498db; --green: #2ecc71; }
-        body { margin: 0; background: #0b0e11; font-family: 'Poppins', sans-serif; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        
-        #game-container { position: relative; width: 1000px; height: 600px; background: linear-gradient(to bottom, #1a2a6c, #b21f1f, #fdbb2d); border: 5px solid var(--gold); border-radius: 20px; box-shadow: 0 0 50px rgba(0,0,0,0.8); overflow: hidden; }
-        
-        /* Battle UI */
-        .health-bar-container { position: absolute; width: 300px; height: 30px; background: #333; border: 2px solid white; border-radius: 15px; overflow: hidden; }
-        .health-fill { width: 100%; height: 100%; background: var(--green); transition: width 0.5s ease-out; }
-        .player-ui { top: 50px; left: 50px; }
-        .bot-ui { top: 50px; right: 50px; text-align: right; }
-        
-        /* Dragon Graphics */
-        .dragon { position: absolute; width: 150px; height: 150px; transition: transform 0.2s; }
-        #player-dragon { bottom: 150px; left: 150px; background: url('https://cdn-icons-png.flaticon.com/512/606/606553.png') no-repeat center/contain; transform: scaleX(-1); }
-        #bot-dragon { bottom: 150px; right: 150px; background: url('https://cdn-icons-png.flaticon.com/512/606/606548.png') no-repeat center/contain; }
+        :root {
+            --gold: #f1c40f; --dark-bg: #0d1117; --panel: #161b22;
+            --fire: #e74c3c; --water: #3498db; --nature: #2ecc71;
+        }
 
-        /* Action Menu */
-        #action-menu { position: absolute; bottom: 0; width: 100%; height: 120px; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; gap: 20px; border-top: 3px solid var(--gold); }
-        .skill-btn { padding: 15px 25px; border: 2px solid var(--gold); background: #222; color: white; border-radius: 10px; cursor: pointer; transition: 0.3s; font-family: 'Cinzel'; }
-        .skill-btn:hover:not(:disabled) { background: var(--gold); color: black; transform: translateY(-5px); }
-        .skill-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #555; }
+        body { margin: 0; background: var(--dark-bg); color: white; font-family: 'Poppins', sans-serif; overflow: hidden; }
 
-        /* Logs */
-        #battle-log { position: absolute; top: 120px; left: 50%; transform: translateX(-50%); text-align: center; font-style: italic; color: #fff; text-shadow: 2px 2px 4px #000; width: 80%; }
+        /* --- ANA ARAYÜZ --- */
+        #game-wrapper { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+
+        #top-nav {
+            height: 60px; background: var(--panel); display: flex; justify-content: space-around;
+            align-items: center; border-bottom: 2px solid var(--gold); z-index: 10;
+        }
+
+        .res-item { display: flex; align-items: center; gap: 10px; font-weight: bold; font-family: 'Cinzel'; }
+
+        /* --- OYUN ALANI (HABITAT MODU) --- */
+        #world-view {
+            flex-grow: 1; position: relative; overflow: hidden;
+            background: radial-gradient(circle, #1a472a 0%, #0d1117 100%);
+            cursor: grab;
+        }
+
+        .habitat {
+            position: absolute; width: 150px; height: 120px; background: rgba(255,255,255,0.1);
+            border: 2px dashed var(--gold); border-radius: 15px; display: flex; 
+            flex-direction: column; align-items: center; justify-content: center;
+            transition: 0.3s;
+        }
+
+        .habitat:hover { background: rgba(241, 196, 15, 0.2); }
+
+        /* --- SAVAŞ MODU (TURN BASED) --- */
+        #battle-screen {
+            position: absolute; inset: 0; background: url('https://img.freepik.com/free-vector/dark-cave-landscape-scene_1308-56450.jpg') center/cover;
+            display: none; z-index: 100; flex-direction: column;
+        }
+
+        .battle-stage { flex-grow: 1; display: flex; justify-content: space-between; align-items: center; padding: 0 10%; }
         
-        /* Animations */
-        .attack-anim { transform: translateX(100px) scaleX(-1.2) !important; }
-        .bot-attack-anim { transform: translateX(-100px) scale(1.2) !important; }
-        .shake { animation: shake 0.5s; }
-        @keyframes shake { 0% { left: 150px; } 25% { left: 140px; } 50% { left: 160px; } 75% { left: 140px; } 100% { left: 150px; } }
+        .dragon-entity { width: 250px; height: 250px; position: relative; text-align: center; }
+        .hp-container { width: 100%; height: 20px; background: #333; border: 2px solid #fff; border-radius: 10px; margin-top: 10px; }
+        .hp-fill { height: 100%; background: var(--nature); transition: 0.5s; width: 100%; }
+
+        #action-bar {
+            height: 150px; background: rgba(0,0,0,0.9); border-top: 3px solid var(--gold);
+            display: flex; justify-content: center; align-items: center; gap: 20px;
+        }
+
+        /* --- MENÜLER --- */
+        .side-btn { 
+            position: absolute; right: 20px; width: 60px; height: 60px; 
+            background: var(--panel); border: 2px solid var(--gold); border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 20;
+        }
+
+        #inventory-panel {
+            position: absolute; right: -400px; top: 80px; width: 350px; height: 70%;
+            background: var(--panel); border: 2px solid var(--gold); transition: 0.5s; z-index: 50;
+            padding: 20px; overflow-y: auto;
+        }
+
+        .dragon-card {
+            background: #21262d; padding: 10px; margin-bottom: 10px; border-radius: 8px;
+            display: flex; align-items: center; gap: 15px; border: 1px solid #30363d;
+        }
+
+        .btn-main {
+            padding: 10px 20px; background: var(--gold); border: none; border-radius: 5px;
+            font-family: 'Cinzel'; font-weight: bold; cursor: pointer;
+        }
+
+        #log { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 24px; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div class="player-ui">
-            <h3 id="p-name">Ateş Ejderhası (Lv. 5)</h3>
-            <div class="health-bar-container"><div id="p-hp" class="health-fill"></div></div>
-            <p>HP: <span id="p-hp-text">100/100</span></p>
+<div id="game-wrapper">
+    <nav id="top-nav">
+        <div class="res-item">💰 ALTIN: <span id="res-gold">500</span></div>
+        <div class="res-item">💎 ELMAS: <span id="res-dia">10</span></div>
+        <div class="res-item">🥩 YEMEK: <span id="res-food">100</span></div>
+        <button class="btn-main" onclick="openShop()">MARKET</button>
+    </nav>
+
+    <main id="world-view">
+        <div id="habitat-layer"></div>
+        <div id="log">Ejderha Diyarına Hoş Geldin!</div>
+    </main>
+
+    <section id="battle-screen">
+        <div class="battle-stage">
+            <div class="dragon-entity" id="p-entity">
+                <h2 id="p-b-name">EJDERHAN</h2>
+                <div id="p-sprite">🐉</div>
+                <div class="hp-container"><div id="p-hp-fill" class="hp-fill"></div></div>
+                <p id="p-hp-text">100/100</p>
+            </div>
+
+            <div class="dragon-entity" id="b-entity">
+                <h2 id="b-b-name">VAHŞİ EJDER</h2>
+                <div id="b-sprite">🐲</div>
+                <div class="hp-container"><div id="b-hp-fill" class="hp-fill"></div></div>
+                <p id="b-hp-text">150/150</p>
+            </div>
         </div>
-
-        <div class="bot-ui">
-            <h3 id="b-name">Karanlık Lord (Lv. 7)</h3>
-            <div class="health-bar-container"><div id="b-hp" class="health-fill" style="float: right;"></div></div>
-            <p style="clear: both;">HP: <span id="b-hp-text">150/150</span></p>
+        <div id="action-bar">
+            <button class="btn-main" onclick="combat.executeMove('basic')">PENÇE (Fiziksel)</button>
+            <button class="btn-main" style="background: var(--fire)" onclick="combat.executeMove('elemental')">NEFES (Element)</button>
+            <button class="btn-main" style="background: var(--water)" onclick="combat.executeMove('heal')">DİNLEN (Heal)</button>
         </div>
+    </section>
 
-        <div id="battle-log">Savaş Başlıyor! Senin sıran...</div>
-
-        <div id="player-dragon" class="dragon"></div>
-        <div id="bot-dragon" class="dragon"></div>
-
-        <div id="action-menu">
-            <button class="skill-btn" onclick="playerMove('attack')">🔥 ALEV NEFESİ</button>
-            <button class="skill-btn" onclick="playerMove('special')">☄️ METEOR ÇARPMASI</button>
-            <button class="skill-btn" onclick="playerMove('heal')">🛡️ CANLANMA</button>
-        </div>
+    <div id="inventory-panel">
+        <h2 style="font-family: 'Cinzel'; border-bottom: 1px solid var(--gold);">EJDERHALARIM</h2>
+        <div id="dragon-list"></div>
+        <button class="btn-main" style="width:100%; margin-top:20px;" onclick="combat.startBattle()">SAVAŞA GİT (BOTLARA KARŞI)</button>
     </div>
 
+    <div class="side-btn" style="bottom: 100px;" onclick="toggleInventory()">🎒</div>
+</div>
+
 <script>
-    let pState = { hp: 100, maxHp: 100, name: "Ejderhan" };
-    let bState = { hp: 150, maxHp: 150, name: "Karanlık Lord" };
-    let isPlayerTurn = true;
+/* ================================================================
+   DRAGON LORDZ: LEGACY ENGINE v1.0
+   Bu kod modüler bir yapıdadır. Habitat, Savaş ve Ekonomi sistemlerini yönetir.
+   ================================================================
+*/
 
-    const log = document.getElementById('battle-log');
-    const pBtn = document.querySelectorAll('.skill-btn');
+const state = {
+    gold: 500, dia: 10, food: 100,
+    myDragons: [
+        { id: 1, name: "Ateş Yavrusu", type: "fire", lvl: 1, hp: 100, maxHp: 100, atk: 15, sprite: "🔥🐉" }
+    ],
+    habitats: [],
+    shopOpen: false,
+    invOpen: false
+};
 
-    function updateUI() {
-        document.getElementById('p-hp').style.width = (pState.hp / pState.maxHp * 100) + "%";
-        document.getElementById('b-hp').style.width = (bState.hp / bState.maxHp * 100) + "%";
-        document.getElementById('p-hp-text').innerText = `${Math.ceil(pState.hp)}/${pState.maxHp}`;
-        document.getElementById('b-hp-text').innerText = `${Math.ceil(bState.hp)}/${bState.maxHp}`;
-        
-        pBtn.forEach(btn => btn.disabled = !isPlayerTurn);
+// --- EKONOMİ MOTORU ---
+const economy = {
+    updateUI() {
+        document.getElementById('res-gold').innerText = Math.floor(state.gold);
+        document.getElementById('res-dia').innerText = state.dia;
+        document.getElementById('res-food').innerText = state.food;
+        this.renderInventory();
+    },
+    renderInventory() {
+        const list = document.getElementById('dragon-list');
+        list.innerHTML = "";
+        state.myDragons.forEach(d => {
+            list.innerHTML += `
+                <div class="dragon-card">
+                    <div style="font-size: 30px;">${d.sprite}</div>
+                    <div>
+                        <strong>${d.name}</strong><br>
+                        <small>Seviye: ${d.lvl} | Tip: ${d.type}</small><br>
+                        <button onclick="economy.feed(${d.id})" style="font-size:10px;">BESLE (10 YEMEK)</button>
+                    </div>
+                </div>
+            `;
+        });
+    },
+    feed(id) {
+        if(state.food >= 10) {
+            state.food -= 10;
+            const d = state.myDragons.find(x => x.id === id);
+            d.lvl++;
+            d.atk += 5;
+            d.maxHp += 20;
+            this.updateUI();
+            showLog(`${d.name} Seviye Atladı!`);
+        }
     }
+};
 
-    async function playerMove(type) {
-        if(!isPlayerTurn) return;
-        isPlayerTurn = false;
+// --- SAVAŞ MOTORU ---
+const combat = {
+    active: false,
+    playerHp: 0,
+    botHp: 0,
+    currentDragon: null,
+
+    startBattle() {
+        this.currentDragon = state.myDragons[0];
+        this.playerHp = this.currentDragon.maxHp;
+        this.botHp = 100 + (this.currentDragon.lvl * 20);
         
-        let dmg = 0;
-        const pDrag = document.getElementById('player-dragon');
-        const bDrag = document.getElementById('bot-dragon');
+        document.getElementById('battle-screen').style.display = 'flex';
+        document.getElementById('p-b-name').innerText = this.currentDragon.name;
+        document.getElementById('p-sprite').innerText = this.currentDragon.sprite;
+        this.updateBattleUI();
+        showLog("Vahşi bir ejderha belirdi! Senin sıran.");
+    },
 
-        if(type === 'attack') {
-            dmg = 15 + Math.random() * 10;
-            log.innerText = `${pState.name} Alev Nefesi kullandı!`;
-            pDrag.classList.add('attack-anim');
-        } else if(type === 'special') {
-            dmg = 30 + Math.random() * 15;
-            log.innerText = `${pState.name} METEOR ÇAĞIRDI!`;
-            bDrag.style.filter = "hue-rotate(90deg) brightness(2)";
-        } else {
-            let heal = 25;
-            pState.hp = Math.min(pState.maxHp, pState.hp + heal);
-            log.innerText = `${pState.name} yaralarını iyileştirdi.`;
+    updateBattleUI() {
+        document.getElementById('p-hp-fill').style.width = (this.playerHp / this.currentDragon.maxHp * 100) + "%";
+        document.getElementById('b-hp-fill').style.width = (this.botHp / (100 + this.currentDragon.lvl * 20) * 100) + "%";
+        document.getElementById('p-hp-text').innerText = `${Math.ceil(this.playerHp)} / ${this.currentDragon.maxHp}`;
+    },
+
+    executeMove(type) {
+        let dmg = 0;
+        if(type === 'basic') dmg = this.currentDragon.atk;
+        if(type === 'elemental') dmg = this.currentDragon.atk * 1.5;
+        if(type === 'heal') {
+            this.playerHp = Math.min(this.currentDragon.maxHp, this.playerHp + 30);
+            showLog("İyileştin!");
         }
 
-        bState.hp = Math.max(0, bState.hp - dmg);
-        updateUI();
-        
-        setTimeout(() => {
-            pDrag.classList.remove('attack-anim');
-            bDrag.style.filter = "none";
-            if(bState.hp <= 0) {
-                log.innerText = "TEBRİKLER! Karanlık Lord'u yendin!";
-                return;
-            }
-            setTimeout(botMove, 1500);
-        }, 600);
-    }
-
-    async function botMove() {
-        const bDrag = document.getElementById('bot-dragon');
-        const pDrag = document.getElementById('player-dragon');
-        let dmg = 0;
-
-        // Basit AI: Canı %20'den azsa iyileşmeye çalışır
-        if(bState.hp < bState.maxHp * 0.2 && Math.random() > 0.5) {
-            bState.hp += 20;
-            log.innerText = "Karanlık Lord karanlık güçle iyileşiyor!";
-        } else {
-            dmg = 10 + Math.random() * 20;
-            log.innerText = "Karanlık Lord pençe attı!";
-            bDrag.classList.add('bot-attack-anim');
-            pDrag.classList.add('shake');
+        if(dmg > 0) {
+            this.botHp -= dmg;
+            showLog(`Düşmana ${Math.floor(dmg)} hasar verdin!`);
         }
 
-        pState.hp = Math.max(0, pState.hp - dmg);
-        updateUI();
+        this.updateBattleUI();
+        if(this.botHp <= 0) return this.win();
 
-        setTimeout(() => {
-            bDrag.classList.remove('bot-attack-anim');
-            pDrag.classList.remove('shake');
-            if(pState.hp <= 0) {
-                log.innerText = "YENİLDİN! Ejderhan nakavt oldu.";
-                return;
-            }
-            isPlayerTurn = true;
-            log.innerText = "Senin sıran! Ne yapacaksın?";
-            updateUI();
-        }, 1000);
+        // Bot Sırası
+        setTimeout(() => this.botMove(), 1000);
+    },
+
+    botMove() {
+        let bDmg = 10 + (this.currentDragon.lvl * 2);
+        this.playerHp -= bDmg;
+        showLog(`Düşman sana ${bDmg} vurdu!`);
+        this.updateBattleUI();
+        
+        if(this.playerHp <= 0) this.lose();
+    },
+
+    win() {
+        showLog("ZAFER! 200 Altın ve 20 Yemek kazandın.");
+        state.gold += 200;
+        state.food += 20;
+        setTimeout(() => this.end(), 2000);
+    },
+
+    lose() {
+        showLog("Yenildin... Ejderhan yorgun düştü.");
+        setTimeout(() => this.end(), 2000);
+    },
+
+    end() {
+        document.getElementById('battle-screen').style.display = 'none';
+        economy.updateUI();
     }
+};
 
-    updateUI();
+// --- YARDIMCI FONKSİYONLAR ---
+function showLog(msg) {
+    const logEl = document.getElementById('log');
+    logEl.innerText = msg;
+    logEl.style.opacity = 1;
+    setTimeout(() => { logEl.style.opacity = 0.7; }, 2000);
+}
+
+function toggleInventory() {
+    state.invOpen = !state.invOpen;
+    document.getElementById('inventory-panel').style.right = state.invOpen ? "0px" : "-400px";
+}
+
+function openShop() {
+    if(state.gold >= 500) {
+        state.gold -= 500;
+        const newId = state.myDragons.length + 1;
+        state.myDragons.push({
+            id: newId, 
+            name: "Yenice Ejder", 
+            type: "nature", 
+            lvl: 1, 
+            hp: 120, 
+            maxHp: 120, 
+            atk: 10, 
+            sprite: "🍃🐉" 
+        });
+        showLog("Yeni bir yumurta aldın ve hemen çıktı!");
+        economy.updateUI();
+    } else {
+        showLog("Yetersiz Altın!");
+    }
+}
+
+// Oyunu Başlat
+window.onload = () => {
+    economy.updateUI();
+};
 </script>
 </body>
 </html>
