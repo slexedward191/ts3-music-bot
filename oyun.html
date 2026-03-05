@@ -2,388 +2,284 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>THE LAST PROTOCOL: NEXUS</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&display=swap" rel="stylesheet">
+    <title>THE LAST STAND: REBORN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00f2ff; --void: #0a0a12; --danger: #ff004c; --gold: #ffcc00; }
-        body { margin: 0; overflow: hidden; background: var(--void); font-family: 'JetBrains Mono', monospace; color: #fff; }
-        canvas { display: block; filter: contrast(1.1) brightness(1.1); }
+        :root { --neon: #00f2ff; --danger: #ff004c; --gold: #ffcc00; }
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'Orbitron', sans-serif; color: #fff; user-select: none; }
+        canvas { display: block; margin: 0 auto; box-shadow: 0 0 50px rgba(0,0,0,1); border: 4px solid #1a1a1a; }
 
-        /* --- PROFESSIONAL UI LAYER --- */
-        #ui-root { position: absolute; inset: 0; pointer-events: none; padding: 25px; }
+        /* --- UI MODULLERI --- */
+        #game-ui { position: absolute; inset: 0; pointer-events: none; }
         
-        /* Health & XP */
-        .bars { width: 350px; }
-        .bar-container { height: 10px; background: rgba(0,0,0,0.7); border: 1px solid #333; margin-top: 8px; border-radius: 10px; overflow: hidden; position: relative; }
-        #hp-bar { width: 100%; height: 100%; background: linear-gradient(90deg, var(--danger), #ff5e00); transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        #xp-bar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon), #7d00ff); transition: 0.4s; }
+        /* Sağlık Barı */
+        .hp-container { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 400px; text-align: center; }
+        .hp-bar { height: 20px; background: rgba(0,0,0,0.8); border: 2px solid var(--neon); border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px rgba(0,242,255,0.3); }
+        #hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, var(--danger), #ff8000); transition: width 0.2s ease-out; }
+
+        /* Dalga Duyurusu (Animasyonlu) */
+        #wave-announcer { position: absolute; top: 40%; width: 100%; text-align: center; font-size: 70px; font-weight: 900; 
+            color: #fff; text-shadow: 0 0 30px var(--neon); opacity: 0; transform: scale(0.5); transition: 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #wave-announcer.show { opacity: 1; transform: scale(1); }
+
+        /* Menü ve Butonlar */
+        .btn { pointer-events: all; background: rgba(0,242,255,0.1); border: 2px solid var(--neon); color: var(--neon); 
+            padding: 10px 25px; cursor: pointer; font-family: 'Orbitron'; transition: 0.3s; border-radius: 5px; }
+        .btn:hover { background: var(--neon); color: #000; box-shadow: 0 0 20px var(--neon); }
+
+        #guide-btn { position: absolute; top: 20px; right: 20px; }
         
-        /* Stats Dashboard */
-        #dashboard { position: absolute; bottom: 25px; left: 25px; background: rgba(0,0,0,0.8); border: 1px solid var(--neon); padding: 15px; border-radius: 8px; font-size: 12px; min-width: 200px; backdrop-filter: blur(5px); }
-        .stat-item { display: flex; justify-content: space-between; margin: 4px 0; color: #aaa; }
-        .stat-item span { color: var(--neon); font-weight: 800; }
+        /* Modal (Kılavuz ve Ölüm Ekranı) */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; 
+            align-items: center; justify-content: center; z-index: 100; pointer-events: all; }
+        .modal h2 { color: var(--neon); font-size: 40px; margin-bottom: 20px; }
+        .modal p { color: #ccc; max-width: 500px; text-align: center; line-height: 1.8; margin-bottom: 30px; }
 
-        /* Level Up Screen */
-        #level-screen { position: fixed; inset: 0; background: rgba(5,5,10,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; pointer-events: all; }
-        .upgrade-grid { display: flex; gap: 20px; }
-        .card { width: 260px; height: 380px; background: #161625; border: 2px solid #2a2a40; border-radius: 15px; padding: 25px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; }
-        .card:hover { transform: translateY(-15px); border-color: var(--neon); box-shadow: 0 0 40px rgba(0,242,255,0.2); }
-        .card h3 { color: var(--neon); font-size: 18px; margin-bottom: 20px; }
-        .card p { color: #888; font-size: 13px; line-height: 1.6; }
-        .rarity { font-size: 10px; padding: 3px 8px; background: #333; border-radius: 4px; position: absolute; top: 15px; right: 15px; }
-
-        /* Notifications */
-        #alert { position: absolute; top: 20%; width: 100%; text-align: center; font-size: 60px; font-weight: 800; color: var(--danger); text-shadow: 0 0 20px var(--danger); display: none; animation: pulse 0.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        #boss-hp-ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 60%; display: none; }
+        .boss-bar { height: 10px; background: #222; border: 1px solid var(--danger); }
+        #boss-fill { width: 100%; height: 100%; background: var(--danger); }
     </style>
 </head>
 <body>
 
-<div id="ui-root">
-    <div class="bars">
-        <div style="font-size: 12px; letter-spacing: 2px;">PILOT_INTEGRITY</div>
-        <div class="bar-container"><div id="hp-bar"></div></div>
-        <div style="font-size: 12px; letter-spacing: 2px; margin-top: 15px;">DATA_SYNC (LVL <span id="lvl-txt">1</span>)</div>
-        <div class="bar-container"><div id="xp-bar"></div></div>
+<div id="game-ui">
+    <button id="guide-btn" class="btn" onclick="showGuide()">KLAVUZ (P)</button>
+    <div id="wave-announcer">DALGA 1</div>
+    
+    <div id="boss-hp-ui">
+        <div style="color: var(--danger); font-size: 12px; margin-bottom: 5px;">BOSS PROTOKOLÜ AKTİF</div>
+        <div class="boss-bar"><div id="boss-fill"></div></div>
     </div>
 
-    <div id="dashboard">
-        <div class="stat-item">HASAR: <span id="st-dmg">45</span></div>
-        <div class="stat-item">ATIS_HIZI: <span id="st-rate">0.3s</span></div>
-        <div class="stat-item">KRITIK: <span id="st-crit">%8</span></div>
-        <div class="stat-item">MERMI_SAYISI: <span id="st-proj">1</span></div>
-        <div class="stat-item">HAREKET: <span id="st-spd">1.0x</span></div>
-    </div>
-
-    <div style="position: absolute; top: 25px; right: 25px; text-align: right;">
-        <div id="score-txt" style="font-size: 48px; font-weight: 800; color: var(--neon);">0000</div>
-        <div style="font-size: 10px; color: #444;">IMHA_EDILEN_VERI</div>
+    <div class="hp-container">
+        <div style="margin-bottom: 8px; font-size: 14px; letter-spacing: 3px;">ZIRH DURUMU: <span id="hp-pct">100</span>%</div>
+        <div class="hp-bar"><div id="hp-fill"></div></div>
     </div>
 </div>
 
-<div id="alert">BOSS DETECTED</div>
+<div id="guide-modal" class="modal">
+    <h2>OYUN KLAVUZU</h2>
+    <p>WASD ile hareket et. Mouse ile hedef al ve ateş et.<br>
+    Dalgalar halinde gelen düşmanları temizle.<br>
+    Her 5 dalgada bir BOSS gelecek.<br>
+    Alan dışına çıkamazsın, köşeye sıkışmamaya çalış!</p>
+    <button class="btn" onclick="closeGuide()">DEVAM ET</button>
+</div>
 
-<div id="level-screen">
-    <h1 style="letter-spacing: 12px; margin-bottom: 40px;">SISTEM_GUNCELLEMESI</h1>
-    <div class="upgrade-grid" id="upgrade-options"></div>
+<div id="death-modal" class="modal">
+    <h2 style="color: var(--danger);">SİSTEM ÇÖKTÜ</h2>
+    <p id="final-stats">Skor: 0 | Dalga: 1</p>
+    <button class="btn" onclick="resetGame()">YENİDEN BAŞLAT</button>
 </div>
 
 <canvas id="game"></canvas>
 
 <script>
-/** * PROFESSIONAL SURVIVOR ENGINE CORE
- */
+/** * AUDIO ENGINE (Sentezlenmiş Ses Efektleri) */
+const AudioFX = {
+    ctx: new (window.AudioContext || window.webkitAudioContext)(),
+    play(freq, type, dur, vol) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + dur);
+    },
+    shoot() { this.play(150, 'square', 0.1, 0.1); },
+    hit() { this.play(60, 'sawtooth', 0.2, 0.2); },
+    explosion() { this.play(40, 'triangle', 0.5, 0.3); },
+    wave() { this.play(300, 'sine', 1, 0.2); }
+};
+
+/** * GAME CORE */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// Kısıtlı Harita Boyutu
+const MAP_W = 1000; const MAP_H = 800;
+canvas.width = MAP_W; canvas.height = MAP_H;
 
-// --- GAME STATE & CONFIG ---
-const Game = {
-    active: true, paused: false, frame: 0,
-    camera: { x: 0, y: 0 },
-    player: null,
-    enemies: [], bullets: [], particles: [], gems: [],
-    wave: 1, score: 0, shake: 0,
-    keys: {}, mouse: { x: 0, y: 0, down: false }
-};
+let player, enemies, bullets, particles, wave, score, isPaused, gameActive;
+const keys = {}; const mouse = {x:0, y:0, down:false};
 
 class Player {
     constructor() {
-        this.x = 0; this.y = 0; // World Coordinates
-        this.r = 20; this.hp = 100; this.maxHp = 100;
-        this.lvl = 1; this.xp = 0; this.nextXp = 100;
-        this.stats = { dmg: 45, rate: 350, spd: 4.8, crit: 0.08, proj: 1, range: 600 };
-        this.lastFire = 0;
+        this.x = MAP_W/2; this.y = MAP_H/2; this.r = 20;
+        this.hp = 100; this.maxHp = 100; this.speed = 5;
     }
-
     update() {
-        // Smooth Movement
-        let mx = 0, my = 0;
-        if(Game.keys['w']) my -= this.stats.spd;
-        if(Game.keys['s']) my += this.stats.spd;
-        if(Game.keys['a']) mx -= this.stats.spd;
-        if(Game.keys['d']) mx += this.stats.spd;
-        
-        this.x += mx; this.y += my;
-        
-        // Weapon Logic
-        if(Game.mouse.down) this.shoot();
-        this.draw();
+        if(keys['w'] && this.y > this.r) this.y -= this.speed;
+        if(keys['s'] && this.y < MAP_H - this.r) this.y += this.speed;
+        if(keys['a'] && this.x > this.r) this.x -= this.speed;
+        if(keys['d'] && this.x < MAP_W - this.r) this.x += this.speed;
     }
-
     draw() {
-        const screenX = canvas.width/2;
-        const screenY = canvas.height/2;
-        const angle = Math.atan2(Game.mouse.y - screenY, Game.mouse.x - screenX);
-
-        // Player Shadow/Glow
-        ctx.save();
-        ctx.translate(screenX, screenY);
-        ctx.rotate(angle);
-        
-        // Neon Body
-        ctx.shadowBlur = 20; ctx.shadowColor = '#00f2ff';
-        ctx.strokeStyle = '#00f2ff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(18, 0); ctx.lineTo(-12, -14); ctx.lineTo(-12, 14); ctx.closePath();
-        ctx.stroke();
-        
-        // Engine Core
-        ctx.fillStyle = '#ff00ff';
-        ctx.fillRect(-16, -4, 4, 8);
+        const ang = Math.atan2(mouse.y - this.y, mouse.x - this.x);
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(ang);
+        ctx.shadowBlur = 15; ctx.shadowColor = '#00f2ff';
+        ctx.strokeStyle = '#00f2ff'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(15,0); ctx.lineTo(-10,-12); ctx.lineTo(-10,12); ctx.closePath(); ctx.stroke();
         ctx.restore();
-    }
-
-    shoot() {
-        const now = Date.now();
-        if(now - this.lastFire > this.stats.rate) {
-            const screenX = canvas.width/2;
-            const screenY = canvas.height/2;
-            const angle = Math.atan2(Game.mouse.y - screenY, Game.mouse.x - screenX);
-            
-            for(let i=0; i<this.stats.proj; i++) {
-                const spread = (i - (this.stats.proj-1)/2) * 0.15;
-                const isCrit = Math.random() < this.stats.crit;
-                const dmg = isCrit ? this.stats.dmg * 2.5 : this.stats.dmg;
-                Game.bullets.push(new Bullet(this.x, this.y, angle + spread, dmg, isCrit));
-            }
-            this.lastFire = now;
-            Game.shake = 6;
-        }
     }
 }
 
 class Enemy {
     constructor(isBoss = false) {
         this.isBoss = isBoss;
-        const angle = Math.random() * Math.PI * 2;
-        const dist = canvas.width;
-        this.x = Game.player.x + Math.cos(angle) * dist;
-        this.y = Game.player.y + Math.sin(angle) * dist;
-        
-        this.r = isBoss ? 60 : 22;
-        this.hp = (isBoss ? 2500 : 60) * (1 + Game.wave * 0.4);
+        this.r = isBoss ? 60 : 20;
+        this.hp = isBoss ? 1000 + (wave * 500) : 50 + (wave * 10);
         this.maxHp = this.hp;
-        this.speed = isBoss ? 1.6 : 2 + Math.random() + (Game.wave * 0.1);
-        this.color = isBoss ? '#ff004c' : '#76ff03';
-    }
-
-    update() {
-        const angle = Math.atan2(Game.player.y - this.y, Game.player.x - this.x);
-        this.x += Math.cos(angle) * this.speed;
-        this.y += Math.sin(angle) * this.speed;
-
-        const screenX = this.x - Game.player.x + canvas.width/2;
-        const screenY = this.y - Game.player.y + canvas.height/2;
-
-        ctx.save();
-        ctx.shadowBlur = 15; ctx.shadowColor = this.color;
-        ctx.strokeStyle = this.color;
-        ctx.fillStyle = '#111';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, this.r, 0, Math.PI*2);
-        ctx.fill(); ctx.stroke();
+        this.speed = isBoss ? 1.5 : 2 + Math.random();
         
-        // HP Bar
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(screenX - this.r, screenY - this.r - 15, this.r*2, 6);
-        ctx.fillStyle = '#ff004c';
-        ctx.fillRect(screenX - this.r, screenY - this.r - 15, (this.r*2) * (this.hp/this.maxHp), 6);
+        // Kenarlarda doğma
+        if(Math.random() > 0.5) {
+            this.x = Math.random() > 0.5 ? -50 : MAP_W + 50;
+            this.y = Math.random() * MAP_H;
+        } else {
+            this.x = Math.random() * MAP_W;
+            this.y = Math.random() > 0.5 ? -50 : MAP_H + 50;
+        }
+    }
+    update() {
+        const ang = Math.atan2(player.y - this.y, player.x - this.x);
+        this.x += Math.cos(ang) * this.speed;
+        this.y += Math.sin(ang) * this.speed;
+        
+        ctx.save();
+        ctx.shadowBlur = 10; ctx.shadowColor = this.isBoss ? '#ff004c' : '#76ff03';
+        ctx.fillStyle = this.isBoss ? '#ff004c' : '#1a1a1a';
+        ctx.strokeStyle = this.isBoss ? '#fff' : '#76ff03';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
         ctx.restore();
     }
 }
 
 class Bullet {
-    constructor(x, y, ang, dmg, crit) {
+    constructor(x, y, ang) {
         this.x = x; this.y = y;
-        this.vx = Math.cos(ang) * 16;
-        this.vy = Math.sin(ang) * 16;
-        this.dmg = dmg; this.crit = crit;
-        this.life = 100;
+        this.vx = Math.cos(ang) * 12; this.vy = Math.sin(ang) * 12;
+        this.life = 60;
     }
     update() {
-        this.x += this.vx; this.y += this.vy;
-        this.life--;
-        const sx = this.x - Game.player.x + canvas.width/2;
-        const sy = this.y - Game.player.y + canvas.height/2;
-        
-        ctx.fillStyle = this.crit ? '#ff00ff' : '#00f2ff';
-        ctx.shadowBlur = this.crit ? 15 : 0;
-        ctx.beginPath(); ctx.arc(sx, sy, this.crit ? 7 : 4, 0, Math.PI*2); ctx.fill();
+        this.x += this.vx; this.y += this.vy; this.life--;
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2); ctx.fill();
     }
 }
 
-class Particle {
-    constructor(x, y, color) {
-        this.x = x; this.y = y; this.color = color;
-        this.vx = (Math.random()-0.5)*12;
-        this.vy = (Math.random()-0.5)*12;
-        this.alpha = 1;
-    }
-    update() {
-        this.x += this.vx; this.y += this.vy;
-        this.alpha -= 0.02;
-        const sx = this.x - Game.player.x + canvas.width/2;
-        const sy = this.y - Game.player.y + canvas.height/2;
-        ctx.globalAlpha = this.alpha;
-        ctx.fillStyle = this.color;
-        ctx.fillRect(sx, sy, 3, 3);
-        ctx.globalAlpha = 1;
-    }
+/** * MANTIK SİSTEMLERİ */
+
+function init() {
+    player = new Player(); enemies = []; bullets = []; particles = [];
+    wave = 0; score = 0; isPaused = false; gameActive = true;
+    nextWave();
+    animate();
 }
 
-/**
- * CORE SYSTEMS
- */
-
-function spawnWave() {
-    const count = 5 + (Game.wave * 4);
-    for(let i=0; i<count; i++) {
-        setTimeout(() => {
-            if(!Game.paused) Game.enemies.push(new Enemy());
-        }, i * 400);
-    }
-    if(Game.wave % 5 === 0) {
-        document.getElementById('alert').style.display = 'block';
-        setTimeout(() => {
-            Game.enemies.push(new Enemy(true));
-            document.getElementById('alert').style.display = 'none';
-        }, 3000);
-    }
-}
-
-function showUpgrade() {
-    Game.paused = true;
-    const screen = document.getElementById('level-screen');
-    const container = document.getElementById('upgrade-options');
-    screen.style.display = 'flex';
-    container.innerHTML = '';
-
-    const upgrades = [
-        { t: "HYPER-THREADING", d: "Mermi sayısını +1 artırır.", f: () => Game.player.stats.proj++ },
-        { t: "OVERCLOCK", d: "Ateş hızını %30 artırır.", f: () => Game.player.stats.rate *= 0.7 },
-        { t: "CORE REPAIR", d: "Maksimum canı +50 artırır.", f: () => { Game.player.maxHp += 50; Game.player.hp = Game.player.maxHp; }},
-        { t: "CRITICAL RUNTIME", d: "Kritik vuruş şansını %15 artırır.", f: () => Game.player.stats.crit += 0.15 },
-        { t: "TURBO-DRIVE", d: "Hareket hızını %20 artırır.", f: () => Game.player.stats.spd *= 1.2 }
-    ];
-
-    upgrades.sort(() => 0.5 - Math.random()).slice(0, 3).forEach(upg => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `<div class="rarity">LEGENDARY</div><h3>${upg.t}</h3><p>${upg.d}</p>`;
-        card.onclick = () => {
-            upg.f(); Game.paused = false; screen.style.display = 'none'; updateDashboard();
-        };
-        container.appendChild(card);
-    });
-}
-
-function updateDashboard() {
-    const p = Game.player;
-    document.getElementById('st-dmg').innerText = p.stats.dmg.toFixed(0);
-    document.getElementById('st-rate').innerText = (p.stats.rate/1000).toFixed(2) + 's';
-    document.getElementById('st-crit').innerText = `%${(p.stats.crit * 100).toFixed(0)}`;
-    document.getElementById('st-proj').innerText = p.stats.proj;
-    document.getElementById('st-spd').innerText = (p.stats.spd / 4.8).toFixed(1) + 'x';
-}
-
-function loop() {
-    if(!Game.paused) {
-        // Render Background (Grid-Based Environment)
-        ctx.fillStyle = '#0a0a12';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw Grid Lines (Camera Relative)
-        ctx.strokeStyle = '#1a1a2e';
-        ctx.lineWidth = 1;
-        const gridSize = 100;
-        const offsetX = -Game.player.x % gridSize;
-        const offsetY = -Game.player.y % gridSize;
-        
-        for(let x = offsetX; x < canvas.width; x += gridSize) {
-            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+function nextWave() {
+    wave++;
+    const announcer = document.getElementById('wave-announcer');
+    announcer.innerText = `DALGA ${wave}`;
+    announcer.classList.add('show');
+    AudioFX.wave();
+    
+    setTimeout(() => {
+        announcer.classList.remove('show');
+        const count = wave * 3 + 5;
+        for(let i=0; i<count; i++) enemies.push(new Enemy(false));
+        if(wave % 5 === 0) {
+            enemies.push(new Enemy(true));
+            document.getElementById('boss-hp-ui').style.display = 'block';
         }
-        for(let y = offsetY; y < canvas.height; y += gridSize) {
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }, 2000);
+}
+
+function resetGame() {
+    document.getElementById('death-modal').style.display = 'none';
+    init();
+}
+
+function showGuide() { isPaused = true; document.getElementById('guide-modal').style.display = 'flex'; }
+function closeGuide() { isPaused = false; document.getElementById('guide-modal').style.display = 'none'; }
+
+function animate() {
+    if(!gameActive) return;
+    if(isPaused) { requestAnimationFrame(animate); return; }
+
+    // Arka Plan (Animasyonlu Izgara)
+    ctx.fillStyle = '#050505'; ctx.fillRect(0,0, MAP_W, MAP_H);
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 1;
+    for(let i=0; i<MAP_W; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i, MAP_H); ctx.stroke(); }
+    for(let i=0; i<MAP_H; i+=50) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(MAP_W, i); ctx.stroke(); }
+
+    player.update();
+    player.draw();
+
+    // Ateş Etme
+    if(mouse.down && GameFrame % 10 === 0) {
+        const ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+        bullets.push(new Bullet(player.x, player.y, ang));
+        AudioFX.shoot();
+    }
+
+    // Düşman İşleme
+    let bossAlive = false;
+    enemies.forEach((en, ei) => {
+        en.update();
+        if(en.isBoss) { bossAlive = true; document.getElementById('boss-fill').style.width = (en.hp/en.maxHp*100)+'%'; }
+
+        // Oyuncuyla çarpışma
+        const d = Math.hypot(en.x - player.x, en.y - player.y);
+        if(d < en.r + player.r) {
+            player.hp -= en.isBoss ? 1 : 0.3;
+            if(player.hp <= 0) {
+                gameActive = false;
+                document.getElementById('death-modal').style.display = 'flex';
+                document.getElementById('final-stats').innerText = `Skor: ${score} | Dalga: ${wave}`;
+                AudioFX.explosion();
+            }
         }
 
-        if(Game.shake > 0) {
-            ctx.save();
-            ctx.translate((Math.random()-0.5)*Game.shake, (Math.random()-0.5)*Game.shake);
-            Game.shake *= 0.9;
-        }
-
-        Game.player.update();
-
-        // Entity Processing
-        Game.bullets.forEach((b, bi) => {
-            b.update();
-            if(b.life <= 0) Game.bullets.splice(bi, 1);
-            
-            Game.enemies.forEach((en, ei) => {
-                const dist = Math.hypot(b.x - en.x, b.y - en.y);
-                if(dist < en.r) {
-                    en.hp -= b.dmg;
-                    Game.bullets.splice(bi, 1);
-                    for(let i=0; i<6; i++) Game.particles.push(new Particle(b.x, b.y, en.color));
-                    
-                    if(en.hp <= 0) {
-                        Game.score += en.isBoss ? 1000 : 100;
-                        Game.player.xp += en.isBoss ? 200 : 25;
-                        Game.enemies.splice(ei, 1);
-                        if(Game.player.xp >= Game.player.nextXp) {
-                            Game.player.lvl++; Game.player.xp = 0; Game.player.nextXp *= 1.5;
-                            showUpgrade();
-                        }
-                    }
+        // Mermi çarpışma
+        bullets.forEach((b, bi) => {
+            const bd = Math.hypot(en.x - b.x, en.y - b.y);
+            if(bd < en.r) {
+                en.hp -= 20; bullets.splice(bi, 1);
+                AudioFX.hit();
+                if(en.hp <= 0) {
+                    if(en.isBoss) { score += 1000; document.getElementById('boss-hp-ui').style.display = 'none'; }
+                    else score += 100;
+                    enemies.splice(ei, 1);
                 }
-            });
-        });
-
-        Game.enemies.forEach((en, ei) => {
-            en.update();
-            const d = Math.hypot(en.x - Game.player.x, en.y - Game.player.y);
-            if(d < en.r + Game.player.r) {
-                Game.player.hp -= 0.4;
-                Game.shake = 10;
-                if(Game.player.hp <= 0) { alert("PROTOCOL TERMINATED. SCORE: " + Game.score); location.reload(); }
             }
         });
+    });
 
-        Game.particles.forEach((p, i) => {
-            p.update();
-            if(p.alpha <= 0) Game.particles.splice(i, 1);
-        });
+    if(!bossAlive) document.getElementById('boss-hp-ui').style.display = 'none';
+    bullets.forEach((b, i) => { b.update(); if(b.life <= 0) bullets.splice(i,1); });
 
-        if(Game.enemies.length === 0 && !Game.paused) {
-            Game.wave++; spawnWave();
-        }
+    if(enemies.length === 0 && gameActive) nextWave();
 
-        // UI SYNC
-        document.getElementById('hp-bar').style.width = (Game.player.hp / Game.player.maxHp * 100) + '%';
-        document.getElementById('xp-bar').style.width = (Game.player.xp / Game.player.nextXp * 100) + '%';
-        document.getElementById('score-txt').innerText = Game.score.toString().padStart(4, '0');
-        document.getElementById('lvl-txt').innerText = Game.player.lvl;
+    // UI Güncelleme
+    document.getElementById('hp-fill').style.width = player.hp + '%';
+    document.getElementById('hp-pct').innerText = Math.max(0, Math.floor(player.hp));
 
-        if(Game.shake > 0) ctx.restore();
-    }
-    Game.frame++;
-    requestAnimationFrame(loop);
+    GameFrame++;
+    requestAnimationFrame(animate);
 }
 
-// Setup
-window.onkeydown = e => Game.keys[e.key.toLowerCase()] = true;
-window.onkeyup = e => Game.keys[e.key.toLowerCase()] = false;
-window.onmousemove = e => { Game.mouse.x = e.clientX; Game.mouse.y = e.clientY; };
-window.onmousedown = () => Game.mouse.down = true;
-window.onmouseup = () => Game.mouse.down = false;
+let GameFrame = 0;
+window.onkeydown = e => { keys[e.key.toLowerCase()] = true; if(e.key.toLowerCase()==='p') showGuide(); };
+window.onkeyup = e => keys[e.key.toLowerCase()] = false;
+window.onmousemove = e => { 
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left; mouse.y = e.clientY - rect.top;
+};
+window.onmousedown = () => mouse.down = true;
+window.onmouseup = () => mouse.down = false;
 
-Game.player = new Player();
-spawnWave();
-loop();
+init();
 </script>
 </body>
 </html>
