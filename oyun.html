@@ -2,104 +2,75 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Lordz RPG - Boss Hunt</title>
+    <title>Eternal Lordz MMORPG</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: 'Segoe UI', sans-serif; }
-        canvas { display: block; background: #2c3e50; }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; }
-        #skills { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
-        .skill-slot { 
-            width: 60px; height: 60px; background: rgba(0,0,0,0.7); border: 2px solid #f1c40f; 
-            border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; font-weight: bold; font-size: 12px;
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Cinzel', serif; color: white; }
+        canvas { display: block; }
+        
+        /* Gelişmiş Arayüz (HUD) */
+        #game-ui { position: absolute; inset: 0; pointer-events: none; }
+        
+        #top-bar { position: absolute; top: 20px; left: 20px; display: flex; gap: 20px; }
+        .stat-card { background: rgba(0,0,0,0.7); border: 2px solid #c9a227; padding: 10px 20px; border-radius: 5px; box-shadow: 0 0 15px rgba(201,162,39,0.3); }
+        
+        #skill-bar { 
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            display: flex; gap: 15px; pointer-events: auto;
         }
-        .cooldown { color: #e74c3c; font-size: 10px; }
-        .stat { font-size: 18px; color: #f1c40f; margin-bottom: 5px; }
+        .skill {
+            width: 70px; height: 70px; background: #222; border: 3px solid #444; border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 0.2s; position: relative; overflow: hidden;
+        }
+        .skill.ready { border-color: #3498db; box-shadow: 0 0 10px #3498db; cursor: pointer; }
+        .skill span { font-size: 24px; margin-bottom: 2px; }
+        .skill small { font-size: 10px; color: #aaa; }
+        .cd-overlay { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.6); transition: height 0.1s linear; }
+
+        #level-up-notif {
+            position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 40px; color: #f1c40f; text-shadow: 0 0 20px gold;
+            opacity: 0; pointer-events: none; transition: 0.5s;
+        }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div class="stat">⚔️ Hasar: <span id="dmg">10</span></div>
-        <div class="stat">💎 Ganimet: <span id="loot">0</span></div>
-        <div class="stat">👑 Seviye: <span id="lvl">1</span></div>
+<div id="game-ui">
+    <div id="top-bar">
+        <div class="stat-card">
+            <div style="font-size: 12px; color: #f1c40f;">LEVEL</div>
+            <div id="lvl-val" style="font-size: 24px; font-weight: bold;">1</div>
+        </div>
+        <div class="stat-card">
+            <div style="font-size: 12px; color: #e74c3c;">HP</div>
+            <div id="hp-val" style="font-size: 24px; font-weight: bold;">100 / 100</div>
+        </div>
     </div>
 
-    <div id="skills">
-        <div class="skill-slot">1<br>Hamle<div id="cd1" class="cooldown">Hazır</div></div>
-        <div class="skill-slot">2<br>Kasırga<div id="cd2" class="cooldown">Hazır</div></div>
-        <div class="skill-slot">3<br>Şok Dalgası<div id="cd3" class="cooldown">Hazır</div></div>
-    </div>
+    <div id="level-up-notif">SEVİYE ATLADIN!</div>
 
-    <canvas id="gameCanvas"></canvas>
+    <div id="skill-bar">
+        <div class="skill" id="s1"><span>🔥</span><small>[1] Alev</small><div id="cd1" class="cd-overlay"></div></div>
+        <div class="skill" id="s2"><span>⚡</span><small>[2] Yıldırım</small><div id="cd2" class="cd-overlay"></div></div>
+        <div class="skill" id="s3"><span>❄️</span><small>[3] Buz</small><div id="cd3" class="cd-overlay"></div></div>
+    </div>
+</div>
+
+<canvas id="ctx"></canvas>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('ctx');
+const gl = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let player = { 
-    x: canvas.width/2, y: canvas.height/2, radius: 20, 
-    angle: 0, loot: 0, lvl: 1, 
-    isAttacking: false, attackFrame: 0 
-};
-
-let enemies = [];
-let effects = []; // Skill efektleri için
-let loots = [];
-let skills = {
-    1: { name: "Dash", cd: 0, maxCd: 100 },
-    2: { name: "Spin", cd: 0, maxCd: 300 },
-    3: { name: "Shock", cd: 0, maxCd: 500 }
-};
-
-// Başlangıç düşmanları ve Boss
-spawnEnemies();
-function spawnEnemies() {
-    for(let i=0; i<5; i++) spawnMob(false);
-    spawnMob(true); // Bir adet Boss
-}
-
-function spawnMob(isBoss) {
-    enemies.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: isBoss ? 50 : 20,
-        hp: isBoss ? 500 : 50,
-        maxHp: isBoss ? 500 : 50,
-        isBoss: isBoss,
-        color: isBoss ? '#8e44ad' : '#c0392b'
-    });
-}
-
-window.addEventListener('mousemove', (e) => {
-    player.angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
-});
-
-// Sol tık - Kılıç Sallama
-window.addEventListener('mousedown', () => {
-    if(!player.isAttacking) {
-        player.isAttacking = true;
-        checkHit(120, 1.5); // Kılıç menzili ve hasar çarpanı
-    }
-});
-
-// Skill Tuşları
-window.addEventListener('keydown', (e) => {
-    if(e.key === '1' && skills[1].cd <= 0) useSkill1();
-    if(e.key === '2' && skills[2].cd <= 0) useSkill2();
-    if(e.key === '3' && skills[3].cd <= 0) useSkill3();
-});
-
-function useSkill1() { // DASH (Hızlı İleri Atılma)
-    player.x += Math.cos(player.angle) * 150;
-    player.y += Math.sin(player.angle) * 150;
-    createEffect(player.x, player.y, 40, '#3498db', 'circle');
-    skills[1].cd = skills[1].maxCd;
-}
-
-function useSkill2() { // SPIN (Kasırga Saldırısı)
-    player.isAttacking = true;
-    checkHit(200, 3); // Geniş menzil, yüksek hasar
-    createEffect(
+// --- OYUN AYARLARI ---
+let player = {
+    x: 0, y: 0, 
+    targetX: 0, targetY: 0,
+    hp: 100, maxHp: 100,
+    lvl: 1, xp: 0, nextXp: 100,
+    size: 30, color: '#3498db',
+    skills: {
+        1: {
