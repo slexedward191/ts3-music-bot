@@ -2,67 +2,35 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Neon Leap | Pro Platformer</title>
+    <title>Neon Leap: Elemental</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --neon-blue: #00f2ff;
-            --neon-pink: #ff00ff;
-            --neon-green: #00ff88;
-            --bg-dark: #0a0b1e;
-        }
-
+        :root { --neon-blue: #00f2ff; --neon-pink: #ff00ff; --bg-dark: #050612; }
         body, html { margin: 0; padding: 0; overflow: hidden; background: var(--bg-dark); font-family: 'Orbitron', sans-serif; }
         canvas { display: block; }
-
-        /* UI Paneli */
-        #hud {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 10; padding: 25px; box-sizing: border-box;
-            display: flex; flex-direction: column; justify-content: space-between;
-        }
-
-        .stats-top { display: flex; justify-content: space-between; color: white; text-shadow: 0 0 10px var(--neon-blue); }
-        .lvl-tag { font-size: 32px; font-weight: 900; }
-        
-        #start-overlay {
-            position: fixed; inset: 0; background: rgba(10, 11, 30, 0.95);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 100; color: white; text-align: center;
-        }
-
-        .btn {
-            background: var(--neon-blue); color: #000; border: none; padding: 15px 40px;
-            font-size: 20px; font-weight: 900; cursor: pointer; border-radius: 5px;
-            box-shadow: 0 0 20px var(--neon-blue); transition: 0.3s;
-        }
-        .btn:hover { transform: scale(1.1); box-shadow: 0 0 40px var(--neon-blue); }
-
-        .hint { color: rgba(255,255,255,0.5); font-size: 14px; margin-top: 20px; }
+        #hud { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; z-index: 10; }
+        #overlay { position: fixed; inset: 0; background: rgba(5,6,18,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: white; }
+        .btn { background: var(--neon-blue); border: none; padding: 15px 40px; font-size: 20px; font-weight: 900; cursor: pointer; border-radius: 5px; box-shadow: 0 0 20px var(--neon-blue); }
+        .jump-indicator { font-size: 12px; color: var(--neon-blue); margin-top: 5px; opacity: 0.7; }
     </style>
 </head>
 <body>
 
-<div id="start-overlay">
-    <h1 style="font-size: 60px; margin-bottom: 10px; color: var(--neon-blue);">NEON LEAP</h1>
-    <p style="margin-bottom: 30px; letter-spacing: 2px;">SESLERİ AÇIN VE MACERAYA BAŞLAYIN</p>
-    <button class="btn" onclick="Engine.init()">OYUNU BAŞLAT</button>
-    <div class="hint">YÖN TUŞLARI VEYA WASD İLE HAREKET ET</div>
+<div id="overlay">
+    <h1 style="font-size: 50px; color: var(--neon-blue);">ELEMENTAL LEAP</h1>
+    <p>HAVA DURUMU SİSTEMİ VE ÇİFT ZIPLAMA AKTİF</p>
+    <button class="btn" onclick="Engine.init()">BAŞLAT</button>
 </div>
 
 <div id="hud">
-    <div class="stats-top">
-        <div class="lvl-tag">BÖLÜM: <span id="cur-lvl">1</span></div>
-        <div style="text-align: right;">CAN: <span id="deaths">0</span><br>SÜRE: <span id="timer">0.0</span>s</div>
-    </div>
+    <div style="font-size: 24px;">BÖLÜM: <span id="cur-lvl">1</span></div>
+    <div id="weather-tag" style="color: var(--neon-pink);">DURUM: TEMİZ</div>
+    <div class="jump-indicator">BOŞLUK / W: ÇİFT ZIPLAMA MÜMKÜN</div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
 <script>
-/**
- * PROFESYONEL SES MOTORU (Web Audio API)
- */
 const AudioEngine = {
     ctx: null,
     init() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
@@ -70,201 +38,137 @@ const AudioEngine = {
         if(!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + decay);
         gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + decay);
         osc.connect(gain); gain.connect(this.ctx.destination);
         osc.start(); osc.stop(this.ctx.currentTime + decay);
     },
-    jump() { this.play(150, 'square', 0.2); },
-    die() { this.play(100, 'sawtooth', 0.4, 0.2); },
-    win() { this.play(440, 'sine', 0.5); setTimeout(() => this.play(660, 'sine', 0.5), 100); }
+    jump(isDouble) { this.play(isDouble ? 300 : 150, 'triangle', 0.2); },
+    die() { this.play(60, 'sawtooth', 0.5, 0.2); },
+    win() { this.play(523, 'sine', 0.6); }
 };
 
-/**
- * OYUN MOTORU
- */
 const Engine = {
     canvas: document.getElementById('gameCanvas'),
-    ctx: null,
-    level: 1,
-    deaths: 0,
-    startTime: 0,
-    player: { x: 100, y: 100, vx: 0, vy: 0, w: 25, h: 25, ground: false },
-    platforms: [],
-    hazards: [],
-    keys: {},
-    camera: { x: 0, y: 0 },
+    ctx: null, level: 1,
+    player: { x: 50, y: 400, vx: 0, vy: 0, w: 25, h: 25, jumps: 0, maxJumps: 2 },
+    platforms: [], hazards: [], keys: {}, camera: { x: 0, y: 0 },
+    particles: [], weather: 'CLEAR',
 
     init() {
-        document.getElementById('start-overlay').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
         AudioEngine.init();
         this.ctx = this.canvas.getContext('2d');
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        this.startTime = Date.now();
-        
-        window.addEventListener('keydown', e => this.keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keydown', e => this.handleKeys(e, true));
         window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
-        
         this.loadLevel(this.level);
         this.loop();
     },
 
-    loadLevel(num) {
-        this.platforms = [];
-        this.hazards = [];
-        this.player.x = 50;
-        this.player.y = 400;
-        this.player.vx = 0;
-        this.player.vy = 0;
-        
-        // --- LEVEL DESIGNER (Akıllı Seviye Tasarımı) ---
-        // Başlangıç Platformu
-        this.platforms.push({ x: 0, y: 500, w: 200, h: 40 });
-
-        let lastX = 200;
-        let lastY = 500;
-        let count = 5 + num; // Seviye arttıkça parkur uzar
-
-        for(let i = 0; i < count; i++) {
-            let gap = 80 + (Math.min(num, 50) * 2) + Math.random() * 50;
-            let width = 150 - (Math.min(num, 50) * 1.5);
-            let diffY = (Math.random() - 0.5) * 120;
-            
-            lastX += gap;
-            lastY += diffY;
-            
-            // Platform ekle
-            this.platforms.push({ x: lastX, y: lastY, w: width, h: 20 });
-
-            // Seviye 3'ten sonra dikenler başlar
-            if(num > 2 && Math.random() > 0.6) {
-                this.hazards.push({ x: lastX + 20, y: lastY - 15, w: width - 40, h: 15 });
+    handleKeys(e, state) {
+        let key = e.key.toLowerCase();
+        if(state && (key === 'w' || key === ' ' || key === 'arrowup')) {
+            if(this.player.jumps < this.player.maxJumps) {
+                this.player.vy = -11;
+                this.player.jumps++;
+                AudioEngine.jump(this.player.jumps > 1);
+                this.burstParticles(this.player.x + 12, this.player.y + 25, this.player.jumps > 1 ? '#ff00ff' : '#00f2ff');
             }
         }
+        this.keys[key] = state;
+    },
 
-        // Bitiş Platformu
-        this.finish = { x: lastX + 200, y: lastY - 50, w: 60, h: 100 };
+    loadLevel(num) {
+        this.platforms = []; this.hazards = []; this.particles = [];
+        this.player.x = 100; this.player.y = 400; this.player.vx = 0; this.player.vy = 0;
+        this.player.jumps = 0;
+        
+        // Hava Durumu Belirleme (Her 5 seviyede bir değişir)
+        const weathers = ['CLEAR', 'SNOW', 'METEOR', 'MATRIX'];
+        this.weather = weathers[Math.floor((num-1) / 5) % weathers.length];
+        document.getElementById('weather-tag').innerText = "ATMOSFER: " + this.weather;
+
+        this.platforms.push({ x: 0, y: 500, w: 250, h: 40 });
+        let lx = 250, ly = 500;
+        for(let i=0; i<8+num; i++) {
+            lx += 120 + Math.random()*100; ly += (Math.random()-0.5)*150;
+            this.platforms.push({ x: lx, y: ly, w: 120-num, h: 20 });
+            if(num > 2 && Math.random() > 0.6) this.hazards.push({ x: lx+20, y: ly-15, w: 80-num, h: 15 });
+        }
+        this.finish = { x: lx + 200, y: ly - 50, w: 60, h: 120 };
         document.getElementById('cur-lvl').innerText = num;
+    },
+
+    burstParticles(x, y, color) {
+        for(let i=0; i<10; i++) {
+            this.particles.push({ x, y, vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6, life: 1, color, type: 'spark' });
+        }
     },
 
     update() {
         const p = this.player;
-        // Fizik
-        if(this.keys['a'] || this.keys['arrowleft']) p.vx -= 0.8;
-        if(this.keys['d'] || this.keys['arrowright']) p.vx += 0.8;
-        if((this.keys['w'] || this.keys[' '] || this.keys['arrowup']) && p.ground) {
-            p.vy = -12;
-            p.ground = false;
-            AudioEngine.jump();
-        }
+        if(this.keys['a'] || this.keys['arrowleft']) p.vx -= 0.7;
+        if(this.keys['d'] || this.keys['arrowright']) p.vx += 0.7;
+        p.vy += 0.55; p.vx *= 0.88; p.x += p.vx; p.y += p.vy;
 
-        p.vy += 0.6; // Yerçekimi
-        p.vx *= 0.85; // Sürtünme
-        p.x += p.vx;
-        p.y += p.vy;
-
-        p.ground = false;
         // Platform Çarpışma
         this.platforms.forEach(plat => {
             if(p.x < plat.x + plat.w && p.x + p.w > plat.x && p.y + p.h > plat.y && p.y < plat.y + plat.h) {
                 if(p.vy > 0 && p.y < plat.y) {
-                    p.y = plat.y - p.h;
-                    p.vy = 0;
-                    p.ground = true;
+                    p.y = plat.y - p.h; p.vy = 0; p.jumps = 0;
                 }
             }
         });
 
-        // Ölüm Kontrolü
-        this.hazards.forEach(h => {
-            if(p.x < h.x + h.w && p.x + p.w > h.x && p.y + p.h > h.y && p.y < h.y + h.h) {
-                this.die();
-            }
+        // Hava Durumu Parçacıkları Ekleme
+        if(this.weather === 'SNOW') this.particles.push({ x: Math.random() * canvas.width + this.camera.x, y: this.camera.y - 20, vx: (Math.random()-0.5), vy: 2+Math.random()*2, life: 1, color: '#fff', type: 'snow' });
+        if(this.weather === 'METEOR' && Math.random() > 0.95) this.particles.push({ x: Math.random() * canvas.width + this.camera.x + 400, y: this.camera.y - 20, vx: -8, vy: 8, life: 1, color: '#ff4400', type: 'meteor' });
+        if(this.weather === 'MATRIX') this.particles.push({ x: Math.random() * canvas.width + this.camera.x, y: this.camera.y - 20, vx: 0, vy: 10, life: 1, color: '#0f0', type: 'code' });
+
+        this.particles.forEach((part, i) => {
+            part.x += part.vx; part.y += part.vy; part.life -= (part.type === 'spark' ? 0.02 : 0.005);
+            if(part.life <= 0) this.particles.splice(i, 1);
         });
 
-        if(p.y > window.innerHeight + 500) this.die();
-
-        // Bölüm Geçme
-        if(p.x < this.finish.x + this.finish.w && p.x + p.w > this.finish.x && p.y < this.finish.y + this.finish.h && p.y + p.h > this.finish.y) {
-            AudioEngine.win();
-            this.level++;
-            this.loadLevel(this.level);
-        }
-
-        // Kamera Takibi
         this.camera.x += (p.x - window.innerWidth/2 - this.camera.x) * 0.1;
         this.camera.y += (p.y - window.innerHeight/2 - this.camera.y) * 0.1;
 
-        document.getElementById('timer').innerText = ((Date.now() - this.startTime) / 1000).toFixed(1);
-    },
-
-    die() {
-        AudioEngine.die();
-        this.deaths++;
-        document.getElementById('deaths').innerText = this.deaths;
-        this.loadLevel(this.level);
+        if(p.y > window.innerHeight + 1000 || this.hazards.some(h => p.x < h.x + h.w && p.x + p.w > h.x && p.y + p.h > h.y && p.y < h.y + h.h)) {
+            AudioEngine.die(); this.loadLevel(this.level);
+        }
+        if(p.x > this.finish.x && p.x < this.finish.x + this.finish.w && p.y > this.finish.y && p.y < this.finish.y + this.finish.h) {
+            AudioEngine.win(); this.level++; this.loadLevel(this.level);
+        }
     },
 
     draw() {
         const ctx = this.ctx;
-        ctx.fillStyle = '#0a0b1e';
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.fillStyle = '#050612'; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.save(); ctx.translate(-this.camera.x, -this.camera.y);
 
-        ctx.save();
-        ctx.translate(-this.camera.x, -this.camera.y);
+        this.platforms.forEach(p => { ctx.fillStyle = '#15172b'; ctx.fillRect(p.x, p.y, p.w, p.h); ctx.strokeStyle = '#00f2ff'; ctx.strokeRect(p.x, p.y, p.w, p.h); });
+        this.hazards.forEach(h => { ctx.fillStyle = '#ff0066'; ctx.beginPath(); ctx.moveTo(h.x, h.y+h.h); ctx.lineTo(h.x+h.w/2, h.y); ctx.lineTo(h.x+h.w, h.y+h.h); ctx.fill(); });
+        
+        ctx.fillStyle = '#00ff88'; ctx.globalAlpha = 0.2; ctx.fillRect(this.finish.x, this.finish.y, this.finish.w, this.finish.h); ctx.globalAlpha = 1;
 
-        // Platformlar
-        ctx.fillStyle = '#1a1c3a';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#00f2ff';
-        this.platforms.forEach(p => {
-            ctx.fillRect(p.x, p.y, p.w, p.h);
+        this.particles.forEach(part => {
+            ctx.fillStyle = part.color; ctx.globalAlpha = part.life;
+            if(part.type === 'meteor') { ctx.fillRect(part.x, part.y, 8, 8); }
+            else if(part.type === 'code') { ctx.font = "10px monospace"; ctx.fillText(Math.random()>0.5?"1":"0", part.x, part.y); }
+            else { ctx.fillRect(part.x, part.y, 3, 3); }
         });
 
-        // Dikenler
-        ctx.fillStyle = '#ff00ff';
-        ctx.shadowColor = '#ff00ff';
-        this.hazards.forEach(h => {
-            ctx.beginPath();
-            ctx.moveTo(h.x, h.y + h.h);
-            ctx.lineTo(h.x + h.w/2, h.y);
-            ctx.lineTo(h.x + h.w, h.y + h.h);
-            ctx.fill();
-        });
-
-        // Bitiş (Kapı)
-        ctx.fillStyle = '#00ff88';
-        ctx.shadowColor = '#00ff88';
-        ctx.globalAlpha = 0.3;
-        ctx.fillRect(this.finish.x, this.finish.y, this.finish.w, this.finish.h);
-        ctx.globalAlpha = 1;
-        ctx.strokeRect(this.finish.x, this.finish.y, this.finish.w, this.finish.h);
-
-        // Oyuncu
-        ctx.fillStyle = '#fff';
-        ctx.shadowColor = '#fff';
-        ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
-
+        ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.shadowBlur = 15; ctx.shadowColor = '#00f2ff';
+        ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h); ctx.shadowBlur = 0;
         ctx.restore();
     },
 
-    loop() {
-        this.update();
-        this.draw();
-        requestAnimationFrame(() => this.loop());
-    }
+    loop() { this.update(); this.draw(); requestAnimationFrame(() => this.loop()); }
 };
-
-window.addEventListener('resize', () => {
-    if(Engine.ctx) {
-        Engine.canvas.width = window.innerWidth;
-        Engine.canvas.height = window.innerHeight;
-    }
-});
 </script>
 </body>
 </html>
