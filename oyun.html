@@ -2,245 +2,242 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Neon Void: Zero-G</title>
-    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Orbitron:wght@900&display=swap" rel="stylesheet">
+    <title>Cyber-Dash: Chrono-Breaker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        :root { --p: #00f2ff; --s: #ff00ff; --danger: #ff3300; --bg: #010105; }
-        body, html { margin: 0; padding: 0; overflow: hidden; background: var(--bg); font-family: 'Syncopate'; color: white; }
-        canvas { display: block; filter: saturate(1.5) contrast(1.2); }
+        :root { --neon: #00f2ff; --warn: #ff0055; --slow: #ffcc00; }
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #010103; font-family: 'Syncopate'; }
+        canvas { display: block; filter: contrast(1.1) brightness(1.2); }
         
-        #ui-layer {
-            position: absolute; inset: 0; pointer-events: none; padding: 40px;
-            display: flex; flex-direction: column; justify-content:空间-between;
+        #ui {
+            position: absolute; inset: 0; pointer-events: none; padding: 30px;
+            display: flex; flex-direction: column; color: white;
         }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--p); padding-bottom: 10px; }
-        .celeb-bg {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80vh; height: 80vh; opacity: 0.05; pointer-events: none;
-            filter: grayscale(1) brightness(2); z-index: -1;
-        }
-        .warning { color: var(--danger); font-size: 10px; animation: blink 0.5s infinite; }
+        .energy-bar { width: 200px; height: 10px; border: 1px solid var(--neon); margin-top: 10px; position: relative; }
+        #energy-fill { width: 100%; height: 100%; background: var(--neon); transition: 0.1s; box-shadow: 0 0 15px var(--neon); }
+        .chrono-active { color: var(--slow); text-shadow: 0 0 10px var(--slow); animation: blink 0.2s infinite; display: none; }
         @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
 
-<div id="ui-layer">
-    <div class="header">
-        <div>SECTOR: <span id="lvl-num">01</span></div>
-        <div class="warning">! GRAVITY INTERFERENCE DETECTED !</div>
-        <div id="p-label">CORE_UNIT: ACTIVE</div>
-    </div>
-    <div style="margin-top: auto; font-size: 12px; color: var(--s);">
-        SHIFT/CLICK: FLIP GRAVITY | WASD: MOVE
-    </div>
+<div id="ui">
+    <div style="font-size: 20px;">CHRONO_UNIT: <span id="lvl">01</span></div>
+    <div class="energy-bar"><div id="energy-fill"></div></div>
+    <div style="font-size: 10px; margin-top: 5px;">TIME_ENERGY_BUFFER</div>
+    <div id="chrono-label" class="chrono-active">TIME_DILATION_ACTIVE</div>
 </div>
 
-<img src="" id="celeb-back" class="celeb-bg">
 <canvas id="game"></canvas>
 
 <script>
 /**
- * ULTRA PRO AUDIO ENGINE
+ * DYNAMIC AUDIO SYSTEM
  */
-const Audio = {
+const AudioEngine = {
     ctx: null,
-    init() { this.ctx = new AudioContext(); this.beat(); },
+    init() { this.ctx = new AudioContext(); this.loop(); },
     play(f, t, d, v=0.1) {
+        if(!this.ctx) return;
         const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
-        o.type = t; o.frequency.value = f; g.gain.value = v;
-        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + d);
+        o.type = t; o.frequency.value = f * (Game.timeScale < 1 ? 0.5 : 1);
+        g.gain.value = v; g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + d);
         o.connect(g); g.connect(this.ctx.destination);
         o.start(); o.stop(this.ctx.currentTime + d);
     },
-    beat() {
+    loop() {
         setInterval(() => {
-            this.play(40 + (Engine.lvl * 5), 'sine', 0.3, 0.3); // Heavy Kick
-            if(Math.random() > 0.6) this.play(1000, 'square', 0.05, 0.02); // Glitch Snare
-        }, 250); // Faster Tempo (High Difficulty)
+            this.play(50, 'sine', 0.4, 0.3); // Bass kick
+            if(Math.random() > 0.8) this.play(400, 'triangle', 0.1, 0.05);
+        }, 400);
     }
 };
 
 /**
- * CORE ENGINE: ZERO-G PROTOCOL
+ * ELITE GAME ENGINE
  */
-const Engine = {
-    lvl: 1, 
-    gravity: 0.6,
-    flip: 1, // 1: Down, -1: Up
-    particles: [],
-    mines: [],
-    player: { x: 100, y: 300, vx: 0, vy: 0, w: 20, h: 20, color: '#00f2ff' },
-    keys: {},
-    celebs: ["ELON", "CR7", "MESSI", "BEAST", "TARKAN"],
+const Game = {
+    level: 1, timeScale: 1, energy: 100,
+    player: { x: 100, y: 100, vx: 0, vy: 0, w: 25, h: 25, jumps: 0 },
+    lasers: [], particles: [], keys: {}, shake: 0,
+    celebs: ["ELON", "RONALDO", "BEAST", "TARKAN", "MESSI"],
 
     init() {
         this.cvs = document.getElementById('game');
         this.ctx = this.cvs.getContext('2d');
         this.resize();
         window.onresize = () => this.resize();
-        window.onkeydown = (e) => { 
-            this.keys[e.key.toLowerCase()] = true;
-            if(e.key === 'Shift' || e.key === ' ') this.toggleGravity();
-        };
+        window.onkeydown = (e) => this.keys[e.key.toLowerCase()] = true;
         window.onkeyup = (e) => this.keys[e.key.toLowerCase()] = false;
-        window.onmousedown = () => this.toggleGravity();
+        
+        document.addEventListener('mousedown', (e) => {
+            if(e.button === 2 || e.ctrlKey) this.dash(); // Right click or Ctrl for dash
+        });
+        window.oncontextmenu = (e) => e.preventDefault();
 
-        Audio.init();
+        AudioEngine.init();
         this.load(1);
-        this.loop();
+        this.run();
     },
 
     resize() { this.cvs.width = window.innerWidth; this.cvs.height = window.innerHeight; },
 
-    toggleGravity() {
-        this.flip *= -1;
-        this.player.vy = 0;
-        Audio.play(400, 'triangle', 0.2, 0.1);
-        this.burst(this.player.x, this.player.y, '#ff00ff', 20);
+    dash() {
+        if(this.energy < 30) return;
+        const speed = 40;
+        if(this.keys['a']) this.player.vx = -speed;
+        else if(this.keys['d']) this.player.vx = speed;
+        else this.player.vy = -speed;
+        
+        this.energy -= 30;
+        this.shake = 15;
+        AudioEngine.play(600, 'square', 0.1);
+        this.burst(this.player.x, this.player.y, '#00f2ff', 30);
     },
 
     load(n) {
-        this.lvl = n;
-        this.flip = 1;
-        this.player.x = 100; this.player.y = 300;
-        this.player.vx = 0; this.player.vy = 0;
+        this.level = n; this.energy = 100;
+        this.player.x = 100; this.player.y = 500; this.player.vx = 0; this.player.vy = 0;
+        document.getElementById('lvl').innerText = n.toString().padStart(2, '0');
         
-        document.getElementById('lvl-num').innerText = n.toString().padStart(2, '0');
-        document.getElementById('celeb-back').src = `https://picsum.photos/800/800?sig=${n}`;
-
-        // Level Design: Hardcore Geometry
         const W = this.cvs.width; const H = this.cvs.height;
-        this.walls = [
-            {x: 0, y: 0, w: W, h: 40}, // Ceiling
+        this.platforms = [
             {x: 0, y: H-40, w: W, h: 40}, // Floor
-            {x: 0, y: 0, w: 40, h: H}, // Left
-            {x: W-40, y: 0, w: 40, h: H}, // Right
-            // Mid Obstacles
-            {x: W/2 - 100, y: H/2 - 150, w: 200, h: 20},
-            {x: W/2 - 100, y: H/2 + 150, w: 200, h: 20}
+            {x: 300, y: H-200, w: 200, h: 20},
+            {x: 600, y: H-350, w: 200, h: 20}
         ];
 
-        // Homing Mines (Takip Eden Mayınlar)
-        this.mines = [];
-        for(let i=0; i<Math.min(n, 10); i++) {
-            this.mines.push({ x: W-200, y: Math.random()*H, r: 10, speed: 1 + (n*0.2) });
+        this.lasers = [];
+        for(let i=0; i<3+n; i++) {
+            this.lasers.push({
+                x: 400 + (Math.random()*(W-600)), 
+                y: 100 + (Math.random()*(H-300)),
+                angle: 0, speed: (0.02 + n*0.005), len: 150 + (n*20)
+            });
         }
-
-        this.exit = { x: W-100, y: H/2 - 50, w: 40, h: 100 };
+        this.exit = { x: W-150, y: 100, w: 60, h: 100 };
     },
 
     burst(x, y, c, n) {
-        for(let i=0; i<n; i++) this.particles.push({ x, y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, l: 1, c });
+        for(let i=0; i<n; i++) this.particles.push({ 
+            x, y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, l: 1, c 
+        });
     },
 
     die() {
-        this.burst(this.player.x, this.player.y, '#ff0000', 40);
-        Audio.play(60, 'sawtooth', 0.4);
-        this.load(this.lvl);
+        this.shake = 30;
+        AudioEngine.play(80, 'sawtooth', 0.5);
+        this.load(this.level);
     },
 
     update() {
+        // Time Dilation Logic
+        if(this.keys['shift'] && this.energy > 0) {
+            this.timeScale = 0.2;
+            this.energy -= 0.5;
+            document.getElementById('chrono-label').style.display = 'block';
+        } else {
+            this.timeScale = 1;
+            if(this.energy < 100) this.energy += 0.2;
+            document.getElementById('chrono-label').style.display = 'none';
+        }
+        document.getElementById('energy-fill').style.width = this.energy + '%';
+
         const p = this.player;
-        if(this.keys['a']) p.vx -= 0.8;
-        if(this.keys['d']) p.vx += 0.8;
-        
-        p.vy += this.gravity * this.flip;
-        p.vx *= 0.92;
-        p.x += p.vx; p.y += p.vy;
+        const ts = this.timeScale;
 
-        // Wall Collision
-        this.walls.forEach(w => {
-            if(p.x < w.x+w.w && p.x+p.w > w.x && p.y < w.y+w.h && p.y+p.h > w.y) {
-                // Determine side
-                let dx = (p.x + p.w/2) - (w.x + w.w/2);
-                let dy = (p.y + p.h/2) - (w.y + w.h/2);
-                let width = (p.w + w.w)/2;
-                let height = (p.h + w.h)/2;
-                let crossWidth = width * dy;
-                let crossHeight = height * dx;
+        if(this.keys['a']) p.vx -= 1 * ts;
+        if(this.keys['d']) p.vx += 1 * ts;
+        if((this.keys['w'] || this.keys[' ']) && p.jumps < 2 && !this.jumpLock) {
+            p.vy = -12; p.jumps++; this.jumpLock = true;
+            AudioEngine.play(200, 'triangle', 0.2);
+        }
+        if(!(this.keys['w'] || this.keys[' '])) this.jumpLock = false;
 
-                if(Math.abs(dx) <= width && Math.abs(dy) <= height) {
-                    if(crossWidth > crossHeight) {
-                        if(crossWidth > (-crossHeight)) { p.y = w.y + w.h; p.vy = 0; } // Bottom
-                        else { p.x = w.x - p.w; p.vx = 0; } // Left
-                    } else {
-                        if(crossWidth > (-crossHeight)) { p.x = w.x + w.w; p.vx = 0; } // Right
-                        else { p.y = w.y - p.h; p.vy = 0; } // Top
-                    }
-                }
+        p.vy += 0.6 * ts;
+        p.vx *= (0.85);
+        p.x += p.vx * ts; p.y += p.vy * ts;
+
+        // Platform Collision
+        this.platforms.forEach(b => {
+            if(p.x < b.x+b.w && p.x+p.w > b.x && p.y < b.y+b.h && p.y+p.h > b.y) {
+                if(p.vy > 0) { p.y = b.y-p.h; p.vy = 0; p.jumps = 0; }
+                else { p.vx = 0; }
             }
         });
 
-        // Mine Logic (Homing)
-        this.mines.forEach(m => {
-            let dx = p.x - m.x;
-            let dy = p.y - m.y;
-            let dist = Math.sqrt(dx*dx + dy*dy);
-            m.x += (dx/dist) * m.speed;
-            m.y += (dy/dist) * m.speed;
-            if(dist < 20) this.die();
+        // Laser Rotation & Collision
+        this.lasers.forEach(l => {
+            l.angle += l.speed * ts;
+            const lx2 = l.x + Math.cos(l.angle) * l.len;
+            const ly2 = l.y + Math.sin(l.angle) * l.len;
+            
+            // Simple line-point collision check
+            const dist = Math.hypot(p.x - l.x, p.y - l.y);
+            if(dist < l.len) {
+                const angleToPlayer = Math.atan2(p.y - l.y, p.x - l.x);
+                if(Math.abs(angleToPlayer - l.angle) < 0.1) this.die();
+            }
         });
 
-        // Exit
-        if(p.x > this.exit.x && p.y > this.exit.y && p.y < this.exit.y + this.exit.h) {
-            Audio.play(800, 'sine', 0.6);
-            this.load(this.lvl + 1);
-        }
+        if(p.x > this.exit.x && p.y < this.exit.y + this.exit.h) this.load(this.level + 1);
+        if(p.y > this.cvs.height) this.die();
 
         this.particles.forEach((pt, i) => {
-            pt.x += pt.vx; pt.y += pt.vy; pt.l -= 0.02;
+            pt.x += pt.vx * ts; pt.y += pt.vy * ts; pt.l -= 0.02;
             if(pt.l <= 0) this.particles.splice(i, 1);
         });
+
+        if(this.shake > 0) this.shake *= 0.9;
     },
 
     draw() {
         const ctx = this.ctx;
-        ctx.fillStyle = '#010105'; ctx.fillRect(0, 0, this.cvs.width, this.cvs.height);
+        ctx.fillStyle = '#010103'; ctx.fillRect(0, 0, this.cvs.width, this.cvs.height);
+        
+        ctx.save();
+        if(this.shake > 1) ctx.translate((Math.random()-0.5)*this.shake, (Math.random()-0.5)*this.shake);
 
-        // Scanline Effect
-        ctx.fillStyle = 'rgba(0, 242, 255, 0.03)';
-        for(let i=0; i<this.cvs.height; i+=4) ctx.fillRect(0, i, this.cvs.width, 1);
+        // Grid & Glow
+        ctx.strokeStyle = this.timeScale < 1 ? '#ffcc0011' : '#00f2ff11';
+        for(let i=0; i<this.cvs.width; i+=80) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,this.cvs.height); ctx.stroke(); }
 
-        // Walls
-        ctx.shadowBlur = 15; ctx.shadowColor = '#00f2ff';
-        ctx.fillStyle = '#050515';
-        this.walls.forEach(w => {
-            ctx.fillRect(w.x, w.y, w.w, w.h);
-            ctx.strokeStyle = '#00f2ff55'; ctx.strokeRect(w.x, w.y, w.w, w.h);
+        // Platforms
+        ctx.fillStyle = '#0a0a15'; ctx.shadowBlur = 15; ctx.shadowColor = '#00f2ff';
+        this.platforms.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+
+        // Rotating Lasers
+        this.lasers.forEach(l => {
+            ctx.strokeStyle = varName('--warn'); ctx.lineWidth = 3; ctx.shadowColor = varName('--warn');
+            ctx.beginPath(); ctx.moveTo(l.x, l.y);
+            ctx.lineTo(l.x + Math.cos(l.angle)*l.len, l.y + Math.sin(l.angle)*l.len);
+            ctx.stroke();
+            ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(l.x, l.y, 5, 0, Math.PI*2); ctx.fill();
         });
 
-        // Mines
-        this.mines.forEach(m => {
-            ctx.fillStyle = '#ff0055'; ctx.shadowColor = '#ff0055';
-            ctx.beginPath(); ctx.arc(m.x, m.y, 8, 0, Math.PI*2); ctx.fill();
-            // Glow circle
-            ctx.strokeStyle = '#ff0055'; ctx.beginPath(); ctx.arc(m.x, m.y, 15 + Math.sin(Date.now()*0.01)*5, 0, Math.PI*2); ctx.stroke();
-        });
+        // Player
+        ctx.fillStyle = 'white'; ctx.shadowColor = this.timeScale < 1 ? '#ffcc00' : '#00f2ff';
+        ctx.shadowBlur = 20;
+        ctx.fillRect(this.player.x, this.player.y, this.player.w, this.player.h);
 
         // Particles
         this.particles.forEach(pt => { ctx.globalAlpha = pt.l; ctx.fillStyle = pt.c; ctx.fillRect(pt.x, pt.y, 3, 3); });
-        ctx.globalAlpha = 1;
 
-        // Player (Kinetic Cube)
-        ctx.fillStyle = '#fff'; ctx.shadowBlur = 25; ctx.shadowColor = '#00f2ff';
-        ctx.save();
-        ctx.translate(this.player.x + 10, this.player.y + 10);
-        ctx.rotate(this.player.vx * 0.1);
-        ctx.fillRect(-10, -10, 20, 20);
-        ctx.restore();
-
-        // Exit Portal
-        ctx.fillStyle = '#0dff0022'; ctx.strokeStyle = '#0dff00';
+        // Exit Portal (Celebrity Hologram placeholder)
+        ctx.shadowColor = '#0dff00'; ctx.strokeStyle = '#0dff00';
         ctx.strokeRect(this.exit.x, this.exit.y, this.exit.w, this.exit.h);
+        ctx.fillStyle = 'white'; ctx.font = '10px Syncopate';
+        ctx.fillText("EXIT_PORTAL", this.exit.x - 10, this.exit.y - 10);
 
-        requestAnimationFrame(() => this.loop());
+        ctx.restore();
+        requestAnimationFrame(() => this.run());
     },
 
-    loop() { this.update(); this.draw(); }
+    run() { this.update(); this.draw(); }
 };
 
-Engine.init();
+function varName(n) { return getComputedStyle(document.documentElement).getPropertyValue(n); }
+Game.init();
 </script>
 </body>
 </html>
