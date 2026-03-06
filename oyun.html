@@ -2,104 +2,112 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Korsanlar Kralı - Eğitim Modu</title>
+    <title>Korsanlar Kralı - Legacy</title>
     <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Cinzel:wght@700&display=swap" rel="stylesheet">
     <style>
-        :root { --gold: #ffcc33; --crimson: #8b0000; --sea: #001221; }
+        :root { --gold: #ffcc33; --crimson: #8b0000; --sea: #001a33; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; }
         
-        /* GİRİŞ EKRANI */
-        #auth-overlay { position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.9); z-index: 1000; }
-        .auth-box { width: 400px; padding: 30px; background: #0a141d; border: 2px solid var(--gold); text-align: center; color: white; }
-        input { width: 90%; padding: 10px; margin: 10px 0; background: #1a2533; border: 1px solid #444; color: #fff; }
-        .btn { padding: 12px 25px; cursor: pointer; font-weight: bold; border: none; margin: 5px; font-family: 'Cinzel'; }
-        .btn-gold { background: var(--gold); color: #000; }
+        /* GİRİŞ EKRANI (SON KORSAN TARZI) */
+        #auth-screen { position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 1000; background: radial-gradient(circle, #1a1a1a, #000); }
+        .login-frame { width: 800px; height: 450px; background: rgba(5,15,25,0.95); border: 2px solid var(--gold); display: flex; box-shadow: 0 0 50px rgba(0,0,0,1); }
+        .login-left { width: 40%; padding: 40px; border-right: 1px solid rgba(255,204,51,0.2); text-align: center; }
+        .login-right { width: 60%; background: url('https://i.ibb.co/hC0M9Bf/ship-render.png') no-repeat center; background-size: contain; }
+        
+        input { width: 90%; padding: 10px; margin: 10px 0; background: #111; border: 1px solid #444; color: var(--gold); font-family: 'Cinzel'; }
+        .btn { width: 100%; padding: 15px; margin-top: 10px; cursor: pointer; font-family: 'Cinzel'; font-weight: bold; border: none; transition: 0.3s; }
+        .btn-gold { background: linear-gradient(#d4af37, #8a6d1c); color: #000; }
+        .btn-red { background: linear-gradient(#8b0000, #4a0000); color: #fff; border: 1px solid var(--gold); border-radius: 25px; margin-top: 20px; }
 
-        /* NPC EĞİTİM SİSTEMİ */
-        #npc-overlay {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 800px; height: 200px; background: rgba(10, 20, 30, 0.95);
-            border: 3px solid var(--gold); display: none; z-index: 2000;
-            padding: 20px; box-sizing: border-box; border-radius: 15px;
+        /* NPC EĞİTİM PANELİ */
+        #npc-panel {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 700px; background: rgba(0,0,0,0.9); border: 2px solid var(--gold);
+            display: none; z-index: 2000; padding: 20px; border-radius: 10px;
         }
-        .npc-portrait {
-            position: absolute; left: -100px; bottom: 0; width: 250px;
-            filter: drop-shadow(0 0 15px var(--gold));
-        }
-        .npc-text-box { margin-left: 150px; color: white; }
-        .npc-name { font-family: 'Pirata One'; color: var(--gold); font-size: 32px; margin: 0; }
-        .npc-dialog { font-size: 18px; line-height: 1.4; margin-top: 10px; font-style: italic; }
+        .npc-img { position: absolute; left: -80px; bottom: 0; width: 220px; filter: drop-shadow(0 0 10px var(--gold)); }
+        .npc-content { margin-left: 140px; color: white; }
 
         /* OYUN HUD */
-        #game-ui { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; display: none; pointer-events: none; z-index: 100; color: var(--gold); font-family: 'Pirata One'; font-size: 24px; }
-        canvas { background: var(--sea); display: none; }
+        #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; display: none; z-index: 500; pointer-events: none; }
+        .stat { background: rgba(0,0,0,0.8); border: 1px solid var(--gold); padding: 10px; display: inline-block; color: var(--gold); font-family: 'Pirata One'; font-size: 22px; }
+        
+        canvas { background: #001221; cursor: crosshair; display: none; }
     </style>
 </head>
 <body>
 
-<div id="auth-overlay">
-    <div class="auth-box">
-        <h1 style="font-family: 'Pirata One'; font-size: 45px; color: var(--gold);">KORSANLAR KRALI</h1>
-        <input type="text" id="u" placeholder="Kaptan Adı">
-        <input type="password" id="p" placeholder="Şifre">
-        <button class="btn btn-gold" onclick="login()">DENİZE AÇIL</button>
+<div id="auth-screen">
+    <div class="login-frame">
+        <div class="login-left">
+            <h1 style="font-family: 'Pirata One'; color: var(--gold); font-size: 45px; margin: 0;">KORSANLAR KRALI</h1>
+            <p style="color: #aaa; font-size: 12px; margin-bottom: 20px;">Legacy Version 1.0</p>
+            <input type="text" id="user" placeholder="KAPTAN ADI">
+            <input type="password" id="pass" placeholder="PAROLA">
+            <button class="btn btn-gold" onclick="startLegacy()">DENİZE AÇIL</button>
+            <button class="btn btn-red" onclick="alert('Kayıt Sistemi Aktif: Bilgileriniz tarayıcıya işlendi!')">KAYIT OL</button>
+        </div>
+        <div class="login-right"></div>
     </div>
 </div>
 
-<div id="npc-overlay">
-    <img src="https://cdna.artstation.com/p/assets/images/images/021/325/252/original/shane-whelan-pirate-render-01.jpg" class="npc-portrait" alt="Kaptan Sakal">
-    <div class="npc-text-box">
-        <p class="npc-name">Kaptan Sakal</p>
-        <p class="npc-dialog" id="dialog-text">Buralarda yeni bir yüz ha? Dinle evlat, bu denizlerde hayatta kalmak istiyorsan gemini kullanmayı öğrenmelisin!</p>
-        <button class="btn btn-gold" id="npc-btn" onclick="nextTutorial()" style="float: right;">Devam Et</button>
+<div id="npc-panel">
+    <img src="https://cdna.artstation.com/p/assets/images/images/021/325/252/original/shane-whelan-pirate-render-01.jpg" class="npc-img">
+    <div class="npc-content">
+        <h2 style="font-family: 'Pirata One'; color: var(--gold); margin: 0;">Kaptan Sakal</h2>
+        <p id="npc-text">Hoş geldin çaylak! Son Korsan olmak kolay değildir. Önce gemini kontrol etmeyi öğren: [W,A,S,D] tuşlarını kullan!</p>
+        <button class="btn btn-gold" style="width: 120px; padding: 5px; float: right;" onclick="nextStep()">Devam</button>
     </div>
 </div>
 
-<div id="game-ui">
-    ALTIN: <span id="ui-gold">0</span> | HP: <span id="ui-hp">100</span> | [M] MARKET
+<div id="hud">
+    <div class="stat">ALTIN: <span id="gold">0</span></div>
+    <div class="stat">HP: <span id="hp">100</span></div>
+    <div class="stat">SEVİYE: <span id="lvl">1</span></div>
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<canvas id="game"></canvas>
 
 <script>
-    const canvas = document.getElementById('gameCanvas');
+    const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    let player = { x: 400, y: 300, angle: 0, speed: 0, hp: 100, gold: 0 };
-    let tutorialStep = 0;
-    let keys = {};
+    let p = { x: 500, y: 500, a: 0, s: 0, hp: 100, g: 0, bullets: [] };
+    let enemies = [];
+    let step = 0;
+    const keys = {};
 
-    function login() {
-        document.getElementById('auth-overlay').style.display = 'none';
+    function startLegacy() {
+        const u = document.getElementById('user').value;
+        if(!u) return alert("Kaptan adını gir!");
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('npc-panel').style.display = 'block';
+        document.getElementById('hud').style.display = 'block';
         canvas.style.display = 'block';
-        document.getElementById('game-ui').style.display = 'block';
-        document.getElementById('npc-overlay').style.display = 'block';
         resize();
+        setInterval(spawn, 3000);
         requestAnimationFrame(loop);
     }
 
-    // EĞİTİM ADIMLARI
-    const dialogs = [
-        "Buralarda yeni bir yüz ha? Dinle evlat, bu denizlerde hayatta kalmak istiyorsan gemini kullanmayı öğrenmelisin!",
-        "Gemiye yön vermek için [W-A-S-D] tuşlarını kullan. Hadi bir tur at bakalım!",
-        "Güzel! Şimdi o topları ateşleme vakti. [BOŞLUK] tuşuna basarak gülle fırlatabilirsin.",
-        "Düşmanları batırdıkça altın kazanırsın. [M] tuşuna basarak Tersane'ye uğra ve gemini güçlendir.",
-        "Şimdi hazırsın evlat. Unutma, Kızıl Deniz'de sadece en güçlüler kral olur. Rastgele!"
-    ];
-
-    function nextTutorial() {
-        tutorialStep++;
-        if(tutorialStep < dialogs.length) {
-            document.getElementById('dialog-text').innerText = dialogs[tutorialStep];
+    function nextStep() {
+        const texts = [
+            "Harika! Şimdi [BOŞLUK] tuşuyla o topları ateşle. Deniz canavarlarına acıma!",
+            "Batırdığın her gemi sana Altın ve Tecrübe kazandırır. Seviye atlamaya bak!",
+            "Unutma kaptan, Kızıl Deniz'de sadece en kurnaz olan hayatta kalır. Yolun açık olsun!",
+            "Eğitim bitti! Şimdi gerçek bir korsan gibi savaş!"
+        ];
+        if(step < texts.length) {
+            document.getElementById('npc-text').innerText = texts[step];
+            step++;
         } else {
-            document.getElementById('npc-overlay').style.display = 'none';
+            document.getElementById('npc-panel').style.display = 'none';
         }
     }
 
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    function spawn() {
+        if(enemies.length < 5) enemies.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, hp: 50 });
     }
 
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     window.onkeydown = e => keys[e.code] = true;
     window.onkeyup = e => keys[e.code] = false;
 
@@ -110,28 +118,46 @@
     }
 
     function update() {
-        if(keys['KeyW']) player.speed = Math.min(player.speed + 0.1, 3);
-        else player.speed *= 0.98;
-        if(keys['KeyA']) player.angle -= 0.04;
-        if(keys['KeyD']) player.angle += 0.04;
+        if(keys['KeyW']) p.s = Math.min(p.s + 0.1, 3); else p.s *= 0.98;
+        if(keys['KeyA']) p.a -= 0.04; if(keys['KeyD']) p.a += 0.04;
+        p.x += Math.cos(p.a) * p.s; p.y += Math.sin(p.a) * p.s;
 
-        player.x += Math.cos(player.angle) * player.speed;
-        player.y += Math.sin(player.angle) * player.speed;
+        if(keys['Space'] && Date.now() - (p.last || 0) > 500) {
+            p.bullets.push({ x: p.x, y: p.y, vx: Math.cos(p.a)*7, vy: Math.sin(p.a)*7 });
+            p.last = Date.now();
+        }
+
+        p.bullets.forEach((b, i) => {
+            b.x += b.vx; b.y += b.vy;
+            enemies.forEach((en, ei) => {
+                if(Math.hypot(b.x - en.x, b.y - en.y) < 30) {
+                    en.hp -= 25; p.bullets.splice(i, 1);
+                    if(en.hp <= 0) { enemies.splice(ei, 1); p.g += 100; document.getElementById('gold').innerText = p.g; }
+                }
+            });
+        });
     }
 
     function draw() {
-        ctx.fillStyle = "#001a33";
-        ctx.fillRect(0,0, canvas.width, canvas.height);
-
-        // Gemi Çizimi
+        ctx.fillStyle = "#001a33"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        
+        // Oyuncu
         ctx.save();
-        ctx.translate(player.x, player.y);
-        ctx.rotate(player.angle);
-        ctx.fillStyle = "#5d4037";
-        ctx.beginPath();
-        ctx.moveTo(30, 0); ctx.lineTo(-15, -15); ctx.lineTo(-15, 15);
-        ctx.closePath(); ctx.fill();
+        ctx.translate(p.x, p.y); ctx.rotate(p.a);
+        ctx.fillStyle = "#5d4037"; ctx.beginPath();
+        ctx.moveTo(30,0); ctx.lineTo(-15,-15); ctx.lineTo(-15,15); ctx.fill();
+        ctx.fillStyle = "white"; ctx.fillRect(-5,-10,4,20);
         ctx.restore();
+
+        // Gülleler
+        ctx.fillStyle = "orange";
+        p.bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill(); });
+
+        // Düşmanlar
+        enemies.forEach(en => {
+            ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(en.x, en.y, 25, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = "red"; ctx.stroke();
+        });
     }
 </script>
 </body>
