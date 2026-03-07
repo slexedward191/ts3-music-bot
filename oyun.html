@@ -2,72 +2,74 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Pro Fishing HTML5</title>
     <style>
-        body { margin: 0; background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        canvas { border: 5px solid #fff; background: linear-gradient(#87CEEB, #1E90FF); cursor: crosshair; }
+        body { margin: 0; background: #003366; overflow: hidden; color: white; font-family: Arial; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <h1>Okyanus Avı</h1>
+        <p>Puan: <span id="score">0</span></p>
+    </div>
+    <canvas id="gameCanvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-        // Oyun Değişkenleri
-        let score = 0;
-        let fish = { x: 400, y: 300, vx: 2, vy: 1 };
-        let hook = { x: 400, y: 100, isMoving: false };
+    let score = 0;
+    const fishList = [];
+    const fishTypes = [
+        { name: "Palyaço Balığı", color: "orange", speed: 2, size: 20 },
+        { name: "Köpekbalığı", color: "gray", speed: 4, size: 50 },
+        { name: "Vatoz", color: "darkblue", speed: 1.5, size: 40 }
+    ];
 
-        // Oyun Döngüsü (Game Loop)
-        function update() {
-            // Balık hareketi
-            fish.x += fish.vx;
-            fish.y += fish.vy;
-            if (fish.x < 0 || fish.x > 800) fish.vx *= -1;
-            if (fish.y < 200 || fish.y > 550) fish.vy *= -1;
-
-            draw();
-            requestAnimationFrame(update);
+    class Fish {
+        constructor() {
+            this.type = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.vx = (Math.random() - 0.5) * this.type.speed * 2;
         }
-
-        function draw() {
-            ctx.clearRect(0, 0, 800, 600);
-            
-            // Çizim: Balık
-            ctx.fillStyle = "orange";
-            ctx.fillRect(fish.x, fish.y, 40, 20);
-
-            // Çizim: Olta
-            ctx.strokeStyle = "white";
+        draw() {
+            ctx.fillStyle = this.type.color;
             ctx.beginPath();
-            ctx.moveTo(400, 0);
-            ctx.lineTo(hook.x, hook.y);
-            ctx.stroke();
-            ctx.fillStyle = "gray";
-            ctx.fillRect(hook.x-5, hook.y, 10, 10);
-            
-            // Skor
-            ctx.fillStyle = "white";
-            ctx.font = "20px Arial";
-            ctx.fillText("Skor: " + score, 20, 30);
+            ctx.arc(this.x, this.y, this.type.size, 0, Math.PI * 2);
+            ctx.fill();
         }
+        update() {
+            this.x += this.vx;
+            if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+        }
+    }
 
-        canvas.addEventListener('mousemove', (e) => {
-            hook.x = e.clientX - canvas.offsetLeft;
-            hook.y = e.clientY - canvas.offsetTop;
-        });
+    // Balıkları oluştur
+    for(let i=0; i<10; i++) fishList.push(new Fish());
 
-        canvas.addEventListener('click', () => {
-            // Basit vuruş algılama
-            if(Math.abs(hook.x - fish.x) < 50 && Math.abs(hook.y - fish.y) < 50) {
+    canvas.addEventListener('click', (e) => {
+        // Oltayı atma mekaniği: Tıklanan noktaya en yakın balığı bul
+        fishList.forEach((fish, index) => {
+            const dist = Math.hypot(e.clientX - fish.x, e.clientY - fish.y);
+            if(dist < 50) {
                 score += 10;
-                fish.x = Math.random() * 700;
+                document.getElementById('score').innerText = score;
+                fishList.splice(index, 1);
+                fishList.push(new Fish()); // Yeni balık ekle
             }
         });
+    });
 
-        update();
-    </script>
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        fishList.forEach(f => { f.update(); f.draw(); });
+        requestAnimationFrame(animate);
+    }
+    animate();
+</script>
 </body>
 </html>
