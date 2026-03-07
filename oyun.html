@@ -2,74 +2,100 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <title>Ultimate Ocean Fishing Simulator</title>
     <style>
-        body { margin: 0; background: #003366; overflow: hidden; color: white; font-family: Arial; }
-        canvas { display: block; }
-        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
+        body { margin: 0; background: #001a33; overflow: hidden; color: #fff; font-family: 'Segoe UI', sans-serif; }
+        canvas { display: block; cursor: crosshair; }
+        #ui { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px; pointer-events: none; border: 1px solid #4a90e2; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h1>Okyanus Avı</h1>
+        <h2 style="margin:0">Okyanus Avcısı Pro</h2>
         <p>Puan: <span id="score">0</span></p>
+        <p>Envanter: <span id="inv">0</span> balık</p>
     </div>
-    <canvas id="gameCanvas"></canvas>
+    <canvas id="game"></canvas>
 
 <script>
-    const canvas = document.getElementById('gameCanvas');
+    const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    let score = 0;
-    const fishList = [];
+    const state = { score: 0, inventory: [], casted: false, hookX: 0, hookY: 0 };
     const fishTypes = [
-        { name: "Palyaço Balığı", color: "orange", speed: 2, size: 20 },
-        { name: "Köpekbalığı", color: "gray", speed: 4, size: 50 },
-        { name: "Vatoz", color: "darkblue", speed: 1.5, size: 40 }
+        { name: "Neon Tetra", color: "#00ffcc", speed: 2, rarity: 0.7 },
+        { name: "Kılıç Balığı", color: "#ff4444", speed: 5, rarity: 0.2 },
+        { name: "Mavi Balina Yavrusu", color: "#4488ff", speed: 1, rarity: 0.05 }
     ];
 
     class Fish {
         constructor() {
             this.type = fishTypes[Math.floor(Math.random() * fishTypes.length)];
             this.x = Math.random() * canvas.width;
-            this.y = Math.random() * canvas.height;
-            this.vx = (Math.random() - 0.5) * this.type.speed * 2;
-        }
-        draw() {
-            ctx.fillStyle = this.type.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.type.size, 0, Math.PI * 2);
-            ctx.fill();
+            this.y = Math.random() * (canvas.height - 100) + 100;
+            this.vx = (Math.random() - 0.5) * this.type.speed;
         }
         update() {
             this.x += this.vx;
             if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+            // Yem sezme yapay zekası
+            if (state.casted) {
+                let dx = state.hookX - this.x;
+                let dy = state.hookY - this.y;
+                if (Math.hypot(dx, dy) < 200) {
+                    this.x += dx * 0.02;
+                    this.y += dy * 0.02;
+                }
+            }
+        }
+        draw() {
+            ctx.fillStyle = this.type.color;
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y, 20, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 
-    // Balıkları oluştur
-    for(let i=0; i<10; i++) fishList.push(new Fish());
+    let fishList = Array.from({length: 15}, () => new Fish());
 
-    canvas.addEventListener('click', (e) => {
-        // Oltayı atma mekaniği: Tıklanan noktaya en yakın balığı bul
-        fishList.forEach((fish, index) => {
-            const dist = Math.hypot(e.clientX - fish.x, e.clientY - fish.y);
-            if(dist < 50) {
-                score += 10;
-                document.getElementById('score').innerText = score;
-                fishList.splice(index, 1);
-                fishList.push(new Fish()); // Yeni balık ekle
-            }
-        });
+    window.addEventListener('mousedown', (e) => {
+        state.casted = true;
+        state.hookX = e.clientX;
+        state.hookY = e.clientY;
+        
+        setTimeout(() => {
+            fishList.forEach((f, i) => {
+                if (Math.hypot(f.x - state.hookX, f.y - state.hookY) < 50) {
+                    state.score += Math.floor(100 * (1 / f.type.rarity));
+                    state.inventory.push(f.type.name);
+                    document.getElementById('score').innerText = state.score;
+                    document.getElementById('inv').innerText = state.inventory.length;
+                    fishList.splice(i, 1);
+                    fishList.push(new Fish());
+                }
+            });
+            state.casted = false;
+        }, 1000);
     });
 
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function loop() {
+        ctx.fillStyle = "rgba(0, 26, 51, 0.2)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (state.casted) {
+            ctx.strokeStyle = "white";
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(state.hookX, state.hookY);
+            ctx.stroke();
+        }
+
         fishList.forEach(f => { f.update(); f.draw(); });
-        requestAnimationFrame(animate);
+        requestAnimationFrame(loop);
     }
-    animate();
+    loop();
 </script>
 </body>
 </html>
