@@ -62,6 +62,7 @@
         #stats-panel { bottom: -50px; left: -160px; width: 140px; color: var(--neon-blue); }
         #xp-log { right: -160px; top: 50%; transform: translateY(-50%); width: 140px; max-height: 300px; overflow: hidden; border-color: var(--neon-purple); }
         #gold-display { top: -50px; left: 0; color: var(--neon-gold); font-weight: bold; border-color: var(--neon-gold); }
+        #enemy-counter { top: -50px; right: 0; color: var(--neon-red); font-weight: bold; border-color: var(--neon-red); display: none; }
 
         #market-btn {
             position: absolute;
@@ -184,6 +185,7 @@
     </div>
 
     <div id="gold-display" class="ui-panel">ALTIN: <span id="gold-count">0</span></div>
+    <div id="enemy-counter" class="ui-panel">KALAN: <span id="enemy-count">0</span></div>
     <div id="stats-panel" class="ui-panel">
         <h5 style="margin:0">STATS</h5>
         <div id="stat-list" style="font-size: 10px;">• Henüz yok...</div>
@@ -314,6 +316,8 @@
 
     function selectChar(id) { gameState.selectedChar = id; renderMarket(); saveUser(); }
     function updateGoldUI() { document.getElementById('gold-count').innerText = gameState.gold; }
+    
+    function updateEnemyCountUI() { document.getElementById('enemy-count').innerText = enemies.length; }
 
     let enemies = [];
     let bullets = [];
@@ -334,10 +338,10 @@
         enemies = []; bullets = []; particles = [];
         document.getElementById('start-screen').style.display = 'none';
         document.getElementById('market-btn').style.display = 'none';
+        document.getElementById('enemy-counter').style.display = 'block';
         gameState.isRunning = true;
         gameState.wave = 0;
         gameState.xp = 0;
-        // XP sıfırlama ama progresyonu koruma
         gameState.xpRequired = 50; 
         gameState.level = 1;
         nextWave();
@@ -348,6 +352,7 @@
         if (isGuest) { gameState.gold = 0; gameState.ownedChars = ['std']; gameState.selectedChar = 'std'; }
         document.getElementById('death-screen').style.display = 'none';
         document.getElementById('market-btn').style.display = 'block';
+        document.getElementById('enemy-counter').style.display = 'none';
         showStart();
     }
 
@@ -380,16 +385,16 @@
         } else {
             for(let i=0; i<gameState.wave*3.5; i++) enemies.push({ x: Math.random()*1250, y: Math.random() < 0.5 ? -30 : 830, hp: 250, maxHp: 250, size: 25, speed: 1.8 + Math.random(), boss: false, color: `hsl(${Math.random()*360}, 70%, 50%)` });
         }
+        updateEnemyCountUI();
     }
 
     function addXP(val, type, isBossDeath) {
-        // GÜNCEL XP ÖDÜLLERİ: Boss 25, Küçük 10
         const xpReward = isBossDeath ? 25 : 10;
         gameState.xp += xpReward;
-        
         const goldPlus = isBossDeath ? 5 : 1;
         gameState.gold += goldPlus;
         updateGoldUI(); saveUser();
+        updateEnemyCountUI();
         
         const log = document.createElement('div');
         log.innerHTML = `<span style="color:var(--neon-purple)">+${xpReward} XP</span> | <span style="color:var(--neon-gold)">+${goldPlus} G</span><br>${type}`;
@@ -400,7 +405,7 @@
         if(gameState.xp >= gameState.xpRequired) { 
             gameState.xp = 0; 
             gameState.level++; 
-            gameState.xpRequired += 50; // HER SEVİYEDE 50 ARTIŞ (50, 100, 150...)
+            gameState.xpRequired += 50;
             showUpgrades(); 
         }
     }
@@ -434,12 +439,7 @@
         const now = Date.now();
         if (now - lastAreaDamageTime < areaDamageCooldown) return;
         lastAreaDamageTime = now;
-        particles.push({ 
-            type: 'area', 
-            radius: 150, 
-            life: 1.0, 
-            color: '#00f2ff' 
-        });
+        particles.push({ type: 'area', radius: 150, life: 1.0, color: '#00f2ff' });
     }
 
     function loop() {
@@ -478,8 +478,9 @@
                     if (dist < p.radius) {
                         e.hp -= 0.84; 
                         if (e.hp <= 0) {
-                            addXP(0, "AURA ÖLDÜRMESİ", e.boss); // addXP içindeki ödül sistemi artık içeriden çekiliyor
+                            addXP(0, "AURA ÖLDÜRMESİ", e.boss); 
                             enemies.splice(ei, 1);
+                            updateEnemyCountUI();
                         }
                     }
                 });
@@ -499,7 +500,7 @@
             bullets.forEach((bul, bi) => {
                 if (Math.hypot(bul.x - e.x, bul.y - e.y) < e.size) {
                     e.hp -= bul.d; bullets.splice(bi, 1);
-                    if (e.hp <= 0) { addXP(0, e.boss ? "BOSS":"ZOMBİ", e.boss); enemies.splice(i,1); }
+                    if (e.hp <= 0) { addXP(0, e.boss ? "BOSS":"ZOMBİ", e.boss); enemies.splice(i,1); updateEnemyCountUI(); }
                 }
             });
 
