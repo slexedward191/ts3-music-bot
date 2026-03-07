@@ -1,101 +1,11 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <title>Ultimate Ocean Fishing Simulator</title>
-    <style>
-        body { margin: 0; background: #001a33; overflow: hidden; color: #fff; font-family: 'Segoe UI', sans-serif; }
-        canvas { display: block; cursor: crosshair; }
-        #ui { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px; pointer-events: none; border: 1px solid #4a90e2; }
-    </style>
-</head>
-<body>
-    <div id="ui">
-        <h2 style="margin:0">Okyanus Avcısı Pro</h2>
-        <p>Puan: <span id="score">0</span></p>
-        <p>Envanter: <span id="inv">0</span> balık</p>
-    </div>
-    <canvas id="game"></canvas>
-
 <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const state = { score: 0, inventory: [], casted: false, hookX: 0, hookY: 0 };
-    const fishTypes = [
-        { name: "Neon Tetra", color: "#00ffcc", speed: 2, rarity: 0.7 },
-        { name: "Kılıç Balığı", color: "#ff4444", speed: 5, rarity: 0.2 },
-        { name: "Mavi Balina Yavrusu", color: "#4488ff", speed: 1, rarity: 0.05 }
-    ];
-
-    class Fish {
-        constructor() {
-            this.type = fishTypes[Math.floor(Math.random() * fishTypes.length)];
-            this.x = Math.random() * canvas.width;
-            this.y = Math.random() * (canvas.height - 100) + 100;
-            this.vx = (Math.random() - 0.5) * this.type.speed;
-        }
-        update() {
-            this.x += this.vx;
-            if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-            // Yem sezme yapay zekası
-            if (state.casted) {
-                let dx = state.hookX - this.x;
-                let dy = state.hookY - this.y;
-                if (Math.hypot(dx, dy) < 200) {
-                    this.x += dx * 0.02;
-                    this.y += dy * 0.02;
-                }
-            }
-        }
-        draw() {
-            ctx.fillStyle = this.type.color;
-            ctx.beginPath();
-            ctx.ellipse(this.x, this.y, 20, 10, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
+    let bullets = [];
+    function fire() {
+        bullets.push({x: player.x, y: player.y, active: true});
     }
-
-    let fishList = Array.from({length: 15}, () => new Fish());
-
-    window.addEventListener('mousedown', (e) => {
-        state.casted = true;
-        state.hookX = e.clientX;
-        state.hookY = e.clientY;
-        
-        setTimeout(() => {
-            fishList.forEach((f, i) => {
-                if (Math.hypot(f.x - state.hookX, f.y - state.hookY) < 50) {
-                    state.score += Math.floor(100 * (1 / f.type.rarity));
-                    state.inventory.push(f.type.name);
-                    document.getElementById('score').innerText = state.score;
-                    document.getElementById('inv').innerText = state.inventory.length;
-                    fishList.splice(i, 1);
-                    fishList.push(new Fish());
-                }
-            });
-            state.casted = false;
-        }, 1000);
-    });
-
-    function loop() {
-        ctx.fillStyle = "rgba(0, 26, 51, 0.2)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        if (state.casted) {
-            ctx.strokeStyle = "white";
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0);
-            ctx.lineTo(state.hookX, state.hookY);
-            ctx.stroke();
-        }
-
-        fishList.forEach(f => { f.update(); f.draw(); });
-        requestAnimationFrame(loop);
+    
+    function updateBullets() {
+        bullets = bullets.filter(b => b.y > 0); // Ekranda olanları tut
+        bullets.forEach(b => b.y -= 5);
     }
-    loop();
 </script>
-</body>
-</html>
