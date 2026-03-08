@@ -136,7 +136,154 @@
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    
+
+    // Sprite Drawing Functions
+    function drawPlayerSprite(ctx, x, y, size, color, angle) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+
+        // Body/Shoulders
+        ctx.fillStyle = '#312E81';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 1.2, size * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Gun
+        ctx.fillStyle = '#1F2937';
+        ctx.beginPath();
+        ctx.rect(size * 0.3, -size * 0.15, size * 1.5, size * 0.3);
+        ctx.fill();
+
+        // Gun barrel detail
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(size * 0.6, -size * 0.08, size * 1.0, size * 0.16);
+
+        // Helmet
+        ctx.fillStyle = '#4F46E5';
+        ctx.beginPath();
+        ctx.arc(0, -size * 0.1, size * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Helmet visor
+        ctx.fillStyle = '#1F2937';
+        ctx.beginPath();
+        ctx.ellipse(size * 0.2, -size * 0.1, size * 0.4, size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    function drawEnemySprite(ctx, x, y, size, color) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Zombie arms (reaching forward)
+        ctx.fillStyle = '#65A30D';
+        ctx.beginPath();
+        ctx.ellipse(-size * 0.3, -size * 0.4, size * 0.5, size * 0.2, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-size * 0.3, size * 0.4, size * 0.5, size * 0.2, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main body
+        ctx.fillStyle = color || '#65A30D';
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tattered clothing
+        ctx.fillStyle = '#78350F';
+        ctx.beginPath();
+        ctx.arc(0, size * 0.2, size * 0.6, 0, Math.PI, false);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = '#DC2626';
+        ctx.beginPath();
+        ctx.arc(-size * 0.25, -size * 0.2, size * 0.12, 0, Math.PI * 2);
+        ctx.arc(size * 0.25, -size * 0.2, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye glow
+        ctx.fillStyle = '#FF0000';
+        ctx.beginPath();
+        ctx.arc(-size * 0.25, -size * 0.2, size * 0.06, 0, Math.PI * 2);
+        ctx.arc(size * 0.25, -size * 0.2, size * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    function drawBossSprite(ctx, x, y, size, color) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Pulsing glow effect
+        const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+
+        // Spikes
+        ctx.fillStyle = '#111827';
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            ctx.save();
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(size * 0.8, 0);
+            ctx.lineTo(size * 1.4, 0);
+            ctx.lineTo(size * 0.9, size * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Main body armor
+        ctx.fillStyle = '#7F1D1D';
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Armor plates
+        ctx.fillStyle = '#1F2937';
+        ctx.beginPath();
+        ctx.arc(-size * 0.3, -size * 0.3, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(size * 0.3, -size * 0.3, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, size * 0.35, size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Core (weak point)
+        ctx.fillStyle = `rgba(245, 158, 11, ${pulse})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Core inner glow
+        ctx.fillStyle = `rgba(255, 255, 255, ${pulse * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Menacing eyes
+        ctx.fillStyle = '#FEF2F2';
+        ctx.beginPath();
+        ctx.arc(-size * 0.25, -size * 0.4, size * 0.15, 0, Math.PI * 2);
+        ctx.arc(size * 0.25, -size * 0.4, size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#DC2626';
+        ctx.beginPath();
+        ctx.arc(-size * 0.25, -size * 0.4, size * 0.08, 0, Math.PI * 2);
+        ctx.arc(size * 0.25, -size * 0.4, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
     let currentUser = null;
     let isGuest = false;
     let animationId = null;
@@ -256,7 +403,8 @@
         const charData = CHARS.find(c => c.id === gameState.selectedChar);
         player = {
             x: 625, y: 400, hp: charData.hp, maxHp: charData.hp, armor: charData.armor,
-            speed: 3.5, dmg: 30, shootSpeed: 300, crit: 0, bounce: 0, upgrades: [], color: charData.color
+            speed: 3.5, dmg: 30, shootSpeed: 300, crit: 0, bounce: 0, upgrades: [], color: charData.color,
+            angle: 0
         };
         enemies = []; bullets = []; particles = [];
         document.getElementById('start-screen').style.display = 'none';
@@ -438,9 +586,18 @@
         enemies.forEach((e, i) => {
             const ang = Math.atan2(player.y - e.y, player.x - e.x);
             e.x += Math.cos(ang) * e.speed; e.y += Math.sin(ang) * e.speed;
-            ctx.fillStyle = e.color; ctx.fillRect(e.x-e.size/2, e.y-e.size/2, e.size, e.size);
-            ctx.fillStyle = "red"; ctx.fillRect(e.x-e.size/2, e.y-e.size/2-10, e.size, 5);
-            ctx.fillStyle = "#00ff00"; ctx.fillRect(e.x-e.size/2, e.y-e.size/2-10, (e.hp/e.maxHp)*e.size, 5);
+
+            // Draw enemy sprite (boss or regular)
+            if (e.boss) {
+                drawBossSprite(ctx, e.x, e.y, e.size, e.color);
+            } else {
+                drawEnemySprite(ctx, e.x, e.y, e.size, e.color);
+            }
+
+            // Health bar
+            ctx.fillStyle = "red"; ctx.fillRect(e.x-e.size/2, e.y-e.size/2-12, e.size, 5);
+            ctx.fillStyle = "#00ff00"; ctx.fillRect(e.x-e.size/2, e.y-e.size/2-12, (e.hp/e.maxHp)*e.size, 5);
+
             bullets.forEach((bul, bi) => {
                 if (Math.hypot(bul.x - e.x, bul.y - e.y) < e.size) {
                     e.hp -= bul.d; bullets.splice(bi, 1);
@@ -461,9 +618,15 @@
             display.style.top = (player.y + r.top - 50) + "px";
             document.getElementById('cooldown-timer').innerText = Math.ceil(cdMs/1000);
         } else document.getElementById('cooldown-display').style.display = 'none';
-        ctx.fillStyle = player.color; ctx.beginPath(); ctx.arc(player.x, player.y, 20, 0, 7); ctx.fill();
-        drawBar(player.x-30, player.y+25, 60, 6, player.hp/player.maxHp, "red");
-        drawBar(player.x-30, player.y+33, 60, 6, player.armor/100, "#00f2ff", "white");
+
+        // Update player angle to face mouse
+        player.angle = Math.atan2(my - player.y, mx - player.x);
+
+        // Draw player sprite
+        drawPlayerSprite(ctx, player.x, player.y, 20, player.color, player.angle);
+
+        drawBar(player.x-30, player.y+30, 60, 6, player.hp/player.maxHp, "red");
+        drawBar(player.x-30, player.y+38, 60, 6, player.armor/100, "#00f2ff", "white");
         if(enemies.length === 0 && gameState.isRunning) nextWave();
         animationId = requestAnimationFrame(loop);
     }
