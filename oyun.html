@@ -61,7 +61,7 @@
     </div>
 
     <div id="gold-display" class="ui-panel">ALTIN: <span id="gold-count">0</span></div>
-    <div id="enemy-counter" class="ui-panel">KALAN: <span id="enemy-count">0</span></div>
+    <div id="enemy-counter" class="ui-panel">BÖLÜM: <span id="chapter-display">1</span> | DALGA: <span id="wave-display">0</span><br>KALAN: <span id="enemy-count">0</span></div>
     <div id="stats-panel" class="ui-panel"><h5 style="margin:0">STATS</h5><div id="stat-list" style="font-size: 10px;">• Henüz yok...</div></div>
     <div id="xp-log" class="ui-panel"><h5 style="margin:0">ÖLDÜRME</h5><div id="log-list" style="font-size: 10px;"></div></div>
     <div id="market-btn" onclick="toggleMarket()">MARKET</div>
@@ -112,6 +112,21 @@
         <div class="btn-gif" onclick="resetGame()">RESTART</div>
     </div>
 
+    <div id="chapter-complete-screen" class="overlay" style="display:none">
+        <h1 style="color: var(--neon-gold); font-size: 45px;">BÖLÜM TAMAMLANDI!</h1>
+        <p id="chapter-complete-msg" style="color: var(--neon-blue); font-size: 24px;"></p>
+        <div class="btn-gif" onclick="nextChapter()">SONRAKİ BÖLÜM</div>
+    </div>
+
+    <div id="game-complete-screen" class="overlay" style="display:none">
+        <h1 style="color: var(--neon-gold); font-size: 50px;">OYUN BİTTİ!</h1>
+        <p style="color: var(--neon-blue); font-size: 20px; text-align: center; max-width: 600px; margin: 20px auto;">
+            Tebrikler! Tüm bölümleri başarıyla tamamladın!<br><br>
+            <span style="color: var(--neon-red); font-size: 24px;">Tekrar Oynamak İçin Güncellemeyi Bekle!</span>
+        </p>
+        <div class="btn-gif" onclick="returnToMenu()">MENÜYE DÖN</div>
+    </div>
+
     <div id="upgrade-screen" class="overlay" style="display:none">
         <h2>EKLENTİ SEÇ</h2>
         <div id="upgrade-options" style="display:flex; flex-wrap: wrap; justify-content: center;"></div>
@@ -136,8 +151,24 @@
 
     let gameState = {
         isRunning: false, wave: 0, xp: 0, xpRequired: 50, level: 1,
-        gold: 0, ownedChars: ['std'], selectedChar: 'std'
+        gold: 0, ownedChars: ['std'], selectedChar: 'std', chapter: 1
     };
+
+    // Bölüm başına dalga sayıları
+    const WAVES_PER_CHAPTER = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
+    const TOTAL_CHAPTERS = 20;
+
+    function getChapterWaveCount(chapter) {
+        return WAVES_PER_CHAPTER[chapter - 1] || 100;
+    }
+
+    function getTotalWavesUpToChapter(chapter) {
+        let total = 0;
+        for (let i = 0; i < chapter - 1; i++) {
+            total += WAVES_PER_CHAPTER[i];
+        }
+        return total;
+    }
 
     function showGuide() { document.getElementById('guide-screen').style.display = 'flex'; }
 
@@ -205,7 +236,11 @@
 
     function selectChar(id) { gameState.selectedChar = id; renderMarket(); saveUser(); }
     function updateGoldUI() { document.getElementById('gold-count').innerText = gameState.gold; }
-    function updateEnemyCountUI() { document.getElementById('enemy-count').innerText = enemies.length; }
+    function updateEnemyCountUI() {
+        document.getElementById('enemy-count').innerText = enemies.length;
+        document.getElementById('chapter-display').innerText = gameState.chapter;
+        document.getElementById('wave-display').innerText = gameState.wave;
+    }
 
     let enemies = [];
     let bullets = [];
@@ -228,9 +263,16 @@
         document.getElementById('market-btn').style.display = 'none';
         document.getElementById('enemy-counter').style.display = 'block';
         gameState.isRunning = true;
-        gameState.wave = 0; gameState.xp = 0; gameState.xpRequired = 50; gameState.level = 1;
-        nextWave();
+        gameState.wave = 0; gameState.xp = 0; gameState.xpRequired = 50; gameState.level = 1; gameState.chapter = 1;
+        showChapterStart();
         if(!animationId) loop();
+    }
+
+    function showChapterStart() {
+        const ann = document.getElementById('announcement');
+        ann.style.display = 'block';
+        ann.innerText = `${gameState.chapter}. BÖLÜM`;
+        setTimeout(() => { ann.style.display = 'none'; nextWave(); }, 2000);
     }
 
     function resetGame() {
@@ -254,21 +296,64 @@
 
     function nextWave() {
         gameState.wave++;
+
+        // Bölüm tamamlandı mı kontrol et
+        const wavesInThisChapter = getChapterWaveCount(gameState.chapter);
+        if (gameState.wave > wavesInThisChapter) {
+            gameState.wave--; // Dalga sayısını geri al
+            completeChapter();
+            return;
+        }
+
         gameState.isRunning = false;
         const ann = document.getElementById('announcement');
         ann.style.display = 'block';
+
+        // Her 5 dalgada bir boss (bölüm içinde)
         let isBoss = gameState.wave % 5 === 0;
-        ann.innerText = isBoss ? "BOSS GELİYOR!" : `DALGA ${gameState.wave}`;
+        ann.innerText = isBoss ? "BOSS GELİYOR!" : `DALGA ${gameState.wave} / ${wavesInThisChapter}`;
         setTimeout(() => { ann.style.display = 'none'; gameState.isRunning = true; spawnEnemies(isBoss); }, 2000);
     }
 
+    function completeChapter() {
+        gameState.isRunning = false;
+        if (gameState.chapter >= TOTAL_CHAPTERS) {
+            // Oyun bitti!
+            document.getElementById('game-complete-screen').style.display = 'flex';
+        } else {
+            // Bölüm tamamlandı, sonraki bölüme geç
+            const msg = document.getElementById('chapter-complete-msg');
+            msg.innerHTML = `${gameState.chapter}. Bölümü Başarıyla Tamamladın!<br>Sonraki Bölüm: ${gameState.chapter + 1}. Bölüm (${WAVES_PER_CHAPTER[gameState.chapter]} Dalga)`;
+            document.getElementById('chapter-complete-screen').style.display = 'flex';
+        }
+    }
+
+    function nextChapter() {
+        gameState.chapter++;
+        gameState.wave = 0;
+        document.getElementById('chapter-complete-screen').style.display = 'none';
+        showChapterStart();
+    }
+
+    function returnToMenu() {
+        document.getElementById('game-complete-screen').style.display = 'none';
+        document.getElementById('market-btn').style.display = 'block';
+        document.getElementById('enemy-counter').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+    }
+
     function spawnEnemies(isBoss) {
+        // Bölüme göre zorluk çarpanı
+        const chapterMultiplier = 1 + (gameState.chapter - 1) * 0.3;
+
         if (isBoss) {
             const count = Math.min(5, Math.floor(gameState.wave/5));
-            const bossHp = (gameState.wave / 5) * 2000; 
-            for(let i=0; i<count; i++) enemies.push({ x: Math.random()*1200 + 25, y: -50, hp: bossHp, maxHp: bossHp, size: 70, speed: 1.1, boss: true, color: `hsl(${Math.random()*360}, 100%, 50%)` });
+            const bossHp = (gameState.wave / 5) * 2000 * chapterMultiplier;
+            for(let i=0; i<count; i++) enemies.push({ x: Math.random()*1200 + 25, y: -50, hp: bossHp, maxHp: bossHp, size: 70, speed: 1.1 + (gameState.chapter * 0.05), boss: true, color: `hsl(${Math.random()*360}, 100%, 50%)` });
         } else {
-            for(let i=0; i<gameState.wave*3.5; i++) enemies.push({ x: Math.random()*1250, y: Math.random() < 0.5 ? -30 : 830, hp: 250, maxHp: 250, size: 25, speed: 1.8 + Math.random(), boss: false, color: `hsl(${Math.random()*360}, 70%, 50%)` });
+            const enemyCount = Math.floor(gameState.wave * 3.5 * chapterMultiplier);
+            const enemyHp = Math.floor(250 * chapterMultiplier);
+            for(let i=0; i<enemyCount; i++) enemies.push({ x: Math.random()*1250, y: Math.random() < 0.5 ? -30 : 830, hp: enemyHp, maxHp: enemyHp, size: 25, speed: 1.8 + Math.random() + (gameState.chapter * 0.1), boss: false, color: `hsl(${Math.random()*360}, 70%, 50%)` });
         }
         updateEnemyCountUI();
     }
