@@ -47,6 +47,90 @@
         #xp-bar-container { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); width: 80%; height: 16px; background: #fff; border: 2px solid #000; z-index: 5; }
         #xp-bar-fill { height: 100%; width: 0%; background: var(--neon-purple); transition: 0.3s; }
         #cooldown-display { position: absolute; color: rgba(255, 0, 0, 0.7); font-family: 'Orbitron'; font-size: 12px; display: none; z-index: 100; pointer-events: none; }
+
+        /* Bölüm Seçim Menüsü Stilleri */
+        .chapter-card {
+            background: linear-gradient(145deg, #1a1a2e, #0f0f1a);
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .chapter-card:hover:not(.locked) {
+            transform: translateY(-5px);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+        .chapter-card.unlocked {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+        }
+        .chapter-card.current {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 25px var(--neon-purple);
+            animation: pulse-purple 2s infinite;
+        }
+        .chapter-card.completed {
+            border-color: var(--neon-gold);
+            box-shadow: 0 0 15px var(--neon-gold);
+        }
+        .chapter-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #444;
+        }
+        .chapter-card.locked::after {
+            content: "🔒";
+            font-size: 24px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        @keyframes pulse-purple {
+            0%, 100% { box-shadow: 0 0 20px var(--neon-purple); }
+            50% { box-shadow: 0 0 40px var(--neon-purple); }
+        }
+        .chapter-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 10px var(--neon-blue);
+            margin-bottom: 8px;
+        }
+        .chapter-waves {
+            font-size: 14px;
+            color: var(--neon-blue);
+            margin-bottom: 5px;
+        }
+        .chapter-difficulty {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        .diff-novice { background: #22c55e; color: black; }
+        .diff-rookie { background: #84cc16; color: black; }
+        .diff-easy { background: #eab308; color: black; }
+        .diff-normal { background: #f97316; color: black; }
+        .diff-hard { background: #ef4444; color: white; }
+        .diff-expert { background: #dc2626; color: white; }
+        .diff-master { background: #7c3aed; color: white; }
+        .diff-legendary { background: linear-gradient(90deg, #f59e0b, #ef4444); color: white; }
+        .diff-godlike { background: linear-gradient(90deg, #ec4899, #8b5cf6); color: white; }
+        .chapter-status {
+            font-size: 10px;
+            margin-top: 8px;
+            padding: 3px 6px;
+            border-radius: 5px;
+        }
+        .status-current { background: var(--neon-purple); color: white; }
+        .status-completed { background: var(--neon-gold); color: black; }
     </style>
 </head>
 <body>
@@ -98,7 +182,10 @@
     <div id="start-screen" class="overlay" style="display:none">
         <h1 style="color: var(--neon-red); font-size: 55px;">GameArea Fight</h1>
         <p id="welcome-msg" style="color:var(--neon-blue)"></p>
-        <div class="btn-gif" onclick="startGame()">BAŞLAT</div>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div class="btn-gif" onclick="showChapterMenu()">BÖLÜM SEÇ</div>
+            <div class="btn-gif" onclick="startGame()" style="background:none; border:2px solid white; color:white;">HIZLI BAŞLAT</div>
+        </div>
     </div>
 
     <div id="market-screen" class="overlay" style="display:none">
@@ -125,6 +212,17 @@
             <span style="color: var(--neon-red); font-size: 24px;">Tekrar Oynamak İçin Güncellemeyi Bekle!</span>
         </p>
         <div class="btn-gif" onclick="returnToMenu()">MENÜYE DÖN</div>
+    </div>
+
+    <!-- BÖLÜM SEÇİM MENÜSÜ -->
+    <div id="chapter-menu-screen" class="overlay" style="display:none">
+        <h1 style="color: var(--neon-purple); font-size: 40px; text-shadow: 0 0 20px var(--neon-purple); margin-bottom: 10px;">BÖLÜM SEÇ</h1>
+        <p id="chapter-menu-status" style="color: var(--neon-blue); font-size: 16px; margin-bottom: 20px;"></p>
+        <div id="chapter-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; max-height: 500px; overflow-y: auto; padding: 20px;"></div>
+        <div style="display: flex; gap: 15px; margin-top: 20px;">
+            <div class="btn-gif" onclick="backToStart()">GERİ</div>
+            <div class="btn-gif" onclick="toggleMarketFromMenu()" style="background:none; border:2px solid var(--neon-gold); color: var(--neon-gold);">MARKET</div>
+        </div>
     </div>
 
     <div id="upgrade-screen" class="overlay" style="display:none">
@@ -317,6 +415,107 @@
         return total;
     }
 
+    // Zorluk seviyesini döndür
+    function getDifficulty(chapter) {
+        if (chapter <= 2) return { name: 'Novice', class: 'diff-novice' };
+        if (chapter <= 4) return { name: 'Rookie', class: 'diff-rookie' };
+        if (chapter <= 6) return { name: 'Easy', class: 'diff-easy' };
+        if (chapter <= 8) return { name: 'Normal', class: 'diff-normal' };
+        if (chapter <= 10) return { name: 'Hard', class: 'diff-hard' };
+        if (chapter <= 12) return { name: 'Expert', class: 'diff-expert' };
+        if (chapter <= 14) return { name: 'Master', class: 'diff-master' };
+        if (chapter <= 16) return { name: 'Legendary', class: 'diff-legendary' };
+        return { name: 'GODLIKE', class: 'diff-godlike' };
+    }
+
+    // Bölüm menüsünü göster
+    function showChapterMenu() {
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('chapter-menu-screen').style.display = 'flex';
+        renderChapterGrid();
+    }
+
+    // Bölüm ızgarasını oluştur
+    function renderChapterGrid() {
+        const grid = document.getElementById('chapter-grid');
+        grid.innerHTML = '';
+
+        // Kullanıcı durumunu göster
+        const statusEl = document.getElementById('chapter-menu-status');
+        if (isGuest) {
+            statusEl.innerHTML = '👤 MİSAFİR - İlerlemen kaydedilmez. Kayıt olerek ilerlemeni koruyabilirsin!';
+        } else {
+            statusEl.innerHTML = `🎮 Hoş geldin <span style="color:var(--neon-gold)">${currentUser}</span> - En son ${gameState.chapter}. bölümde kaldın!`;
+        }
+
+        // Misafir için sadece 1. bölüm açık, kayıtlı kullanıcı için en son kaldığı bölüme kadar açık
+        const maxUnlocked = isGuest ? 1 : gameState.chapter;
+
+        for (let i = 1; i <= TOTAL_CHAPTERS; i++) {
+            const waves = WAVES_PER_CHAPTER[i - 1];
+            const difficulty = getDifficulty(i);
+            const isUnlocked = i <= maxUnlocked;
+            const isCurrent = i === maxUnlocked && !isGuest;
+            const isCompleted = !isGuest && i < maxUnlocked;
+
+            const card = document.createElement('div');
+            card.className = `chapter-card ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrent ? 'current' : ''} ${isCompleted ? 'completed' : ''}`;
+            card.onclick = () => selectChapter(i, isUnlocked);
+
+            let statusHtml = '';
+            if (isCurrent) statusHtml = '<div class="chapter-status status-current">DEVAM</div>';
+            else if (isCompleted) statusHtml = '<div class="chapter-status status-completed">TAMAMLANDI</div>';
+
+            card.innerHTML = `
+                <div class="chapter-number">BÖLÜM ${i}</div>
+                <div class="chapter-waves">🌊 ${waves} Dalga</div>
+                <div class="chapter-difficulty ${difficulty.class}">${difficulty.name}</div>
+                ${statusHtml}
+            `;
+
+            grid.appendChild(card);
+        }
+    }
+
+    // Bölüm seç
+    function selectChapter(chapterNum, isUnlocked) {
+        if (!isUnlocked) {
+            if (isGuest) {
+                alert('Misafir olarak yalnızca 1. Bölümü oynayabilirsin! İlerlemeni kaydetmek için kayıt ol!');
+            } else {
+                alert('Bu bölüm henüz kilitli. Önceki bölümleri tamamla!');
+            }
+            return;
+        }
+
+        // Seçilen bölüme git
+        gameState.chapter = chapterNum;
+        gameState.wave = 0;
+        gameState.xp = 0;
+        gameState.xpRequired = 50;
+        gameState.level = 1;
+
+        saveUser();
+        document.getElementById('chapter-menu-screen').style.display = 'none';
+        startGame();
+    }
+
+    // Başlangıç ekranından bölüm menüsüne git
+    function goToChapterMenu() {
+        showChapterMenu();
+    }
+
+    // Marketi menüden aç
+    function toggleMarketFromMenu() {
+        toggleMarket();
+    }
+
+    // Geri butonu
+    function backToStart() {
+        document.getElementById('chapter-menu-screen').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+    }
+
     function showGuide() { document.getElementById('guide-screen').style.display = 'flex'; }
 
     function handleAuth(type) {
@@ -408,10 +607,13 @@
         };
         enemies = []; bullets = []; particles = [];
         document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('chapter-menu-screen').style.display = 'none';
         document.getElementById('market-btn').style.display = 'none';
         document.getElementById('enemy-counter').style.display = 'block';
         gameState.isRunning = true;
-        gameState.wave = 0; gameState.xp = 0; gameState.xpRequired = 50; gameState.level = 1; gameState.chapter = 1;
+        // Bölüm ve dalga sıfırlama - sadece misafir veya yeni başlangıç için
+        if (gameState.chapter === undefined || gameState.chapter < 1) gameState.chapter = 1;
+        gameState.wave = 0; gameState.xp = 0; gameState.xpRequired = 50; gameState.level = 1;
         showChapterStart();
         if(!animationId) loop();
     }
@@ -424,11 +626,16 @@
     }
 
     function resetGame() {
-        if (isGuest) { gameState.gold = 0; gameState.ownedChars = ['std']; gameState.selectedChar = 'std'; }
+        if (isGuest) {
+            gameState.gold = 0;
+            gameState.ownedChars = ['std'];
+            gameState.selectedChar = 'std';
+            gameState.chapter = 1; // Misafir her zaman 1. bölümden başlar
+        }
         document.getElementById('death-screen').style.display = 'none';
         document.getElementById('market-btn').style.display = 'block';
         document.getElementById('enemy-counter').style.display = 'none';
-        showStart();
+        showChapterMenu();
     }
 
     window.onkeydown = e => keys[e.code] = true;
@@ -487,7 +694,7 @@
         document.getElementById('game-complete-screen').style.display = 'none';
         document.getElementById('market-btn').style.display = 'block';
         document.getElementById('enemy-counter').style.display = 'none';
-        document.getElementById('start-screen').style.display = 'flex';
+        showChapterMenu();
     }
 
     function spawnEnemies(isBoss) {
