@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameArea Fight - Final Fix</title>
+    <title>GameArea Fight - Mission Briefing</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap');
 
@@ -27,8 +27,11 @@
         #market-btn { position: absolute; bottom: 10px; right: 10px; padding: 10px 25px; background: var(--neon-gold); color: black; font-weight: bold; border-radius: 5px; cursor: pointer; z-index: 20; }
 
         .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
-        .auth-box { background: #111; padding: 30px; border: 3px solid var(--neon-purple); text-align: center; width: 350px; }
-        .auth-box input { width: 80%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid var(--neon-blue); color: white; font-family: 'Orbitron'; }
+        
+        /* BİLGİ KUTUSU STİLİ */
+        .info-box { background: #111; padding: 30px; border: 3px solid var(--neon-blue); text-align: center; width: 450px; box-shadow: 0 0 20px var(--neon-blue); }
+        .info-box h2 { color: var(--neon-gold); margin-top: 0; }
+        .info-box p { font-size: 14px; line-height: 1.6; color: #ccc; }
         
         .level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 20px; }
         .level-card { background: #222; border: 2px solid #444; padding: 15px; text-align: center; cursor: pointer; opacity: 0.4; pointer-events: none; transition: 0.3s; }
@@ -38,7 +41,7 @@
         #xp-bar-container { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); width: 80%; height: 16px; background: #333; border: 2px solid #000; z-index: 5; }
         #xp-bar-fill { height: 100%; width: 0%; background: var(--neon-purple); transition: 0.3s; }
         #announcement { position: absolute; top: 40%; width: 100%; text-align: center; font-size: 5rem; color: var(--neon-red); display: none; z-index: 500; font-weight: bold; }
-        #cooldown-display { position: absolute; color: var(--neon-red); font-size: 14px; display: none; z-index: 100; pointer-events: none; text-shadow: 0 0 5px black; }
+        #cooldown-display { position: absolute; color: var(--neon-red); font-size: 14px; display: none; z-index: 100; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -58,15 +61,12 @@
     <div id="market-btn" onclick="toggleMarket()">MARKET</div>
 
     <div id="auth-screen" class="overlay">
-        <div class="auth-box">
+        <div class="info-box" style="border-color: var(--neon-purple);">
             <h2 style="color:var(--neon-blue)">GİRİŞ YAP</h2>
-            <input type="text" id="username" placeholder="Kullanıcı Adı">
-            <input type="password" id="password" placeholder="Şifre">
-            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-                <button onclick="handleAuth('login')" style="background:var(--neon-purple); border:none; color:white; padding:12px; cursor:pointer; font-weight:bold;">GİRİŞ YAP / KAYDOL</button>
-                <button onclick="handleAuth('guest')" style="background:#444; border:none; color:white; padding:10px; cursor:pointer;">MİSAFİR OLARAK OYNA</button>
-                <button onclick="showGuide()" style="background:transparent; border:1px solid var(--neon-blue); color:var(--neon-blue); padding:10px; cursor:pointer;">NASIL OYNANIR?</button>
-            </div>
+            <input type="text" id="username" placeholder="Kullanıcı Adı" style="width:80%; padding:10px; margin:10px 0; background:#000; border:1px solid var(--neon-blue); color:white; font-family:'Orbitron';">
+            <input type="password" id="password" placeholder="Şifre" style="width:80%; padding:10px; margin:10px 0; background:#000; border:1px solid var(--neon-blue); color:white; font-family:'Orbitron';">
+            <button onclick="handleAuth('login')" style="width:85%; background:var(--neon-purple); border:none; color:white; padding:12px; cursor:pointer; font-weight:bold; margin-top:10px;">GİRİŞ YAP / KAYDOL</button>
+            <button onclick="handleAuth('guest')" style="width:85%; background:#444; border:none; color:white; padding:10px; cursor:pointer; margin-top:10px;">MİSAFİR OLARAK OYNA</button>
         </div>
     </div>
 
@@ -74,7 +74,23 @@
         <h1 style="color: var(--neon-red); font-size: 45px; margin-bottom:0;">BÖLÜM SEÇ</h1>
         <p id="welcome-msg" style="color:var(--neon-blue); margin-bottom:20px;"></p>
         <div class="level-grid" id="level-grid"></div>
-        <button onclick="toggleMarket()" style="margin-top:30px; background:var(--neon-gold); border:none; padding:10px 40px; font-weight:bold; cursor:pointer;">MARKET</button>
+    </div>
+
+    <div id="level-info-screen" class="overlay" style="display:none; background: rgba(0,0,0,0.8);">
+        <div class="info-box">
+            <h2 id="info-level-title">BÖLÜM 1</h2>
+            <hr border="1" color="#333">
+            <p id="info-level-desc">Bu bölümde düşmanlar daha yavaş ama kalabalık olacak.</p>
+            <div style="text-align: left; background: #222; padding: 15px; margin: 15px 0; border-left: 5px solid var(--neon-gold);">
+                <div>🔥 <b>Dalga Sayısı:</b> <span id="info-waves">5</span></div>
+                <div>💰 <b>Tahmini Kazanç:</b> <span id="info-gold">25 Altın</span></div>
+                <div>🔓 <b>Sonraki Kilit:</b> <span id="info-next">Bölüm 2</span></div>
+            </div>
+            <div style="display:flex; gap:10px; justify-content: center;">
+                <button onclick="startGame()" style="background:var(--neon-blue); color:black; border:none; padding:12px 30px; font-weight:bold; cursor:pointer;">SAVAŞI BAŞLAT</button>
+                <button onclick="closeInfo()" style="background:#444; color:white; border:none; padding:12px 20px; cursor:pointer;">VAZGEÇ</button>
+            </div>
+        </div>
     </div>
 
     <div id="upgrade-screen" class="overlay" style="display:none">
@@ -84,7 +100,7 @@
 
     <div id="death-screen" class="overlay" style="display:none">
         <h1 style="color: white; font-size: 60px;">ÖLDÜN!</h1>
-        <button onclick="location.reload()" style="padding:15px 40px; background:var(--neon-red); color:white; border:none; cursor:pointer; font-family:'Orbitron';">TEKRAR DENE</button>
+        <button onclick="location.reload()" style="padding:15px 40px; background:var(--neon-red); color:white; border:none; cursor:pointer; font-family:'Orbitron';">ANA MENÜ</button>
     </div>
 </div>
 
@@ -94,21 +110,16 @@
     let currentUser = null, isGuest = false;
 
     const ENEMY_COLORS = ['#ff003c', '#00ff00', '#bc13fe', '#ffcc00', '#ffffff', '#00f2ff'];
-    const CHARS = [
-        { id: 'std', name: 'Standart', hp: 100, armor: 0, color: '#00f2ff' },
-        { id: 'mus', name: 'Kaslı', hp: 500, armor: 20, color: '#ff003c' }
-    ];
+    const CHARS = [{ id: 'std', name: 'Standart', hp: 100, armor: 0, color: '#00f2ff' }];
 
     let gameState = {
         isRunning: false, wave: 0, xp: 0, xpRequired: 50, level: 1, gold: 0,
-        unlockedLevel: 1, selectedChar: 'std'
+        unlockedLevel: 1, selectedChar: 'std', currentMission: 1
     };
 
     function handleAuth(type) {
-        if (type === 'guest') { 
-            isGuest = true; currentUser = "Misafir"; 
-            gameState.unlockedLevel = 1;
-        } else {
+        if (type === 'guest') { isGuest = true; currentUser = "Misafir"; gameState.unlockedLevel = 1; }
+        else {
             const u = document.getElementById('username').value;
             const p = document.getElementById('password').value;
             if (!u || !p) return alert("Alanları doldur!");
@@ -135,7 +146,6 @@
     function renderLevels() {
         const grid = document.getElementById('level-grid');
         grid.innerHTML = '';
-        // En az 1. bölüm açık olmalı
         if(!gameState.unlockedLevel) gameState.unlockedLevel = 1;
 
         for(let i=1; i<=20; i++) {
@@ -143,25 +153,32 @@
             const isUnlocked = i <= gameState.unlockedLevel;
             div.className = `level-card ${isUnlocked ? 'unlocked' : ''}`;
             div.innerText = `Bölüm ${i}`;
-            if(isUnlocked) div.onclick = () => { gameState.currentMission = i; startGame(); };
+            if(isUnlocked) div.onclick = () => showLevelInfo(i);
             grid.appendChild(div);
         }
     }
 
-    function showGuide() {
-        alert("KONTROLLER:\nW-A-S-D: Hareket\nSOL TIK: Ateş Et\nSAĞ TIK: Alan Hasarı (Yetenek)\n\nDüşmanları öldürerek XP topla ve geliş!");
+    // BÖLÜM BİLGİSİNİ GÖSTEREN FONKSİYON
+    function showLevelInfo(levelNum) {
+        gameState.currentMission = levelNum;
+        document.getElementById('info-level-title').innerText = `BÖLÜM ${levelNum}`;
+        document.getElementById('info-waves').innerText = `5 Dalga`;
+        document.getElementById('info-gold').innerText = `+${levelNum * 25} Altın`;
+        document.getElementById('info-next').innerText = `Bölüm ${levelNum + 1}`;
+        document.getElementById('info-level-desc').innerText = `Bölüm ${levelNum} Operasyonu: Alanı düşmanlardan temizle ve hayatta kal.`;
+        
+        document.getElementById('level-info-screen').style.display = 'flex';
     }
 
-    // OYUN MOTORU DEĞİŞKENLERİ
+    function closeInfo() { document.getElementById('level-info-screen').style.display = 'none'; }
+
     let enemies = [], bullets = [], particles = [], keys = {}, mousePressed = false;
     let lastShot = 0, lastAreaDamageTime = 0, areaDamageCooldown = 15000, player = {};
 
     function startGame() {
-        const char = CHARS.find(c => c.id === gameState.selectedChar);
-        player = { 
-            x: 625, y: 400, hp: char.hp, maxHp: char.hp, armor: char.armor, 
-            speed: 4, dmg: 35, shootSpeed: 300, upgrades: [], color: char.color 
-        };
+        closeInfo();
+        const char = CHARS[0];
+        player = { x: 625, y: 400, hp: char.hp, maxHp: char.hp, armor: char.armor, speed: 4, dmg: 35, shootSpeed: 300, color: char.color };
         enemies = []; bullets = []; particles = [];
         document.getElementById('start-screen').style.display = 'none';
         document.getElementById('enemy-counter').style.display = 'block';
@@ -192,10 +209,9 @@
         for(let i=0; i<count; i++) {
             enemies.push({
                 x: Math.random() * 1200, y: Math.random() < 0.5 ? -50 : 850,
-                hp: 100 + (gameState.wave * 20),
-                size: 25,
+                hp: 100 + (gameState.wave * 20), size: 25,
                 speed: 1.5 + (Math.random()),
-                color: ENEMY_COLORS[Math.floor(Math.random() * ENEMY_COLORS.length)] // RENKLER BURADA
+                color: ENEMY_COLORS[Math.floor(Math.random() * ENEMY_COLORS.length)]
             });
         }
         updateEnemyUI();
@@ -221,19 +237,11 @@
         if (!gameState.isRunning) return;
         ctx.clearRect(0,0,1250,800);
 
-        // Hareket
         if (keys['KeyW'] && player.y > 25) player.y -= player.speed;
         if (keys['KeyS'] && player.y < 775) player.y += player.speed;
         if (keys['KeyA'] && player.x > 25) player.x -= player.speed;
         if (keys['KeyD'] && player.x < 1225) player.x += player.speed;
 
-        // Ateş
-        if (mousePressed && Date.now() - lastShot > player.shootSpeed) {
-            bullets.push({ x: player.x, y: player.y, vx: 10, vy: 0 }); // Basit yön, mouse takibi eklenebilir
-            lastShot = Date.now();
-        }
-
-        // Alan Hasarı Efekti (Sağ Tık)
         particles.forEach((p, i) => {
             ctx.beginPath(); ctx.arc(player.x, player.y, p.radius * (1-p.life + 0.5), 0, Math.PI*2);
             ctx.strokeStyle = p.color; ctx.lineWidth = 5; ctx.stroke();
@@ -241,14 +249,10 @@
             p.life -= 0.02; if(p.life <= 0) particles.splice(i,1);
         });
 
-        // Düşman İşleme
         enemies.forEach((e, i) => {
             const ang = Math.atan2(player.y - e.y, player.x - e.x);
             e.x += Math.cos(ang) * e.speed; e.y += Math.sin(ang) * e.speed;
-            
-            ctx.fillStyle = e.color;
-            ctx.fillRect(e.x-e.size/2, e.y-e.size/2, e.size, e.size);
-
+            ctx.fillStyle = e.color; ctx.fillRect(e.x-e.size/2, e.y-e.size/2, e.size, e.size);
             if (Math.hypot(player.x-e.x, player.y-e.y) < 30) {
                 if(player.armor > 0) player.armor -= 0.2; else player.hp -= 0.5;
                 if(player.hp <= 0) { gameState.isRunning = false; document.getElementById('death-screen').style.display='flex'; }
@@ -256,15 +260,10 @@
             if(e.hp <= 0) { enemies.splice(i,1); gameState.gold += 5; updateEnemyUI(); if(enemies.length === 0) nextWave(); }
         });
 
-        // Oyuncu Çizim
-        ctx.fillStyle = player.color;
-        ctx.beginPath(); ctx.arc(player.x, player.y, 20, 0, Math.PI*2); ctx.fill();
-
-        // HP & Armor Barları
+        ctx.fillStyle = player.color; ctx.beginPath(); ctx.arc(player.x, player.y, 20, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = "red"; ctx.fillRect(player.x-25, player.y-40, 50 * (player.hp/player.maxHp), 5);
         ctx.fillStyle = "cyan"; ctx.fillRect(player.x-25, player.y-33, 50 * (player.armor/100), 3);
 
-        // Cooldown UI
         const cd = areaDamageCooldown - (Date.now() - lastAreaDamageTime);
         if(cd > 0) {
             const ui = document.getElementById('cooldown-display'); ui.style.display = 'block';
@@ -275,7 +274,7 @@
         requestAnimationFrame(loop);
     }
     
-    function toggleMarket() { alert("Market şu an bu bölümde kapalı, önce savaşı kazan!"); }
+    function toggleMarket() { alert("Market şu an bu bölümde kapalı!"); }
 </script>
 </body>
 </html>
