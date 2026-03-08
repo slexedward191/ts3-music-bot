@@ -296,12 +296,12 @@
         screen.style.display = 'flex';
         box.innerHTML = '';
         const opts = [
-            {t: "+3 Hasar", f: () => player.dmg += 3},
-            {t: "+0.3 Hız", f: () => player.shootSpeed = Math.max(50, player.shootSpeed - 30)}, 
-            {t: "+1 Armor", f: () => player.armor = Math.min(100, player.armor + 20)},
-            {t: "+2 Kritik", f: () => player.crit += 0.1},
-            {t: "+1 Seken", f: () => player.bounce += 1}
-        ];
+    {t: "+6 Hasar", f: () => player.dmg += 6},
+    {t: "+0.5 Hız", f: () => player.shootSpeed = Math.max(50, player.shootSpeed - 50)}, 
+    {t: "+1 Armor", f: () => player.armor = Math.min(100, player.armor + 20)},
+    {t: "+2 Kritik", f: () => player.crit += 0.1},
+    {t: "+1 Seken", f: () => player.bounce += 1}
+];
         opts.forEach(o => {
             const d = document.createElement('div');
             d.className = 'char-card'; d.style.cursor = 'pointer';
