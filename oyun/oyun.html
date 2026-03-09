@@ -132,7 +132,7 @@
         .status-current { background: var(--neon-purple); color: white; }
         .status-completed { background: var(--neon-gold); color: black; }
 
-        /* Banner ve Bayrak Stilleri */
+        /* Banner Stilleri */
         #banner-container {
             position: absolute;
             top: 20px;
@@ -186,49 +186,6 @@
             text-transform: uppercase;
         }
 
-        .lang-flags {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin-top: 15px;
-            padding: 10px 20px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .flag-btn {
-            width: 36px;
-            height: 24px;
-            cursor: pointer;
-            border-radius: 4px;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-            opacity: 0.6;
-            object-fit: cover;
-        }
-
-        .flag-btn:hover {
-            transform: scale(1.2);
-            opacity: 1;
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .flag-btn.active {
-            opacity: 1;
-            border-color: var(--neon-gold);
-            box-shadow: 0 0 15px var(--neon-gold);
-        }
-
-        /* Auth screen adjustments */
-        #auth-screen {
-            z-index: 1500;
-        }
-
-        #auth-screen .auth-box {
-            margin-top: 180px;
-        }
-
         /* Logout button */
         #logout-btn {
             position: absolute;
@@ -259,18 +216,11 @@
     <!-- Çıkış Butonu -->
     <button id="logout-btn" onclick="logout()">Çıkış</button>
 
-    <!-- Banner ve Bayraklar -->
+    <!-- Banner -->
     <div id="banner-container">
         <div class="game-banner">
             <h1 class="game-title">GAMEAREA FIGHT</h1>
             <div class="subtitle">Full Edition</div>
-        </div>
-        <div class="lang-flags">
-            <img src="https://flagcdn.com/w80/tr.png" alt="Türkçe" class="flag-btn" data-lang="tr" onclick="changeLanguage('tr')">
-            <img src="https://flagcdn.com/w80/fr.png" alt="Français" class="flag-btn" data-lang="fr" onclick="changeLanguage('fr')">
-            <img src="https://flagcdn.com/w80/de.png" alt="Deutsch" class="flag-btn" data-lang="de" onclick="changeLanguage('de')">
-            <img src="https://flagcdn.com/w80/gb.png" alt="English" class="flag-btn" data-lang="en" onclick="changeLanguage('en')">
-            <img src="https://flagcdn.com/w80/ru.png" alt="Русский" class="flag-btn" data-lang="ru" onclick="changeLanguage('ru')">
         </div>
     </div>
 
@@ -287,35 +237,6 @@
     <div id="stats-panel" class="ui-panel"><h5 style="margin:0">STATS</h5><div id="stat-list" style="font-size: 10px;">• Henüz yok...</div></div>
     <div id="xp-log" class="ui-panel"><h5 style="margin:0">ÖLDÜRME</h5><div id="log-list" style="font-size: 10px;"></div></div>
     <div id="market-btn" onclick="toggleMarket()">MARKET</div>
-
-    <div id="auth-screen" class="overlay">
-        <div class="auth-box">
-            <h2 style="color:var(--neon-blue)" data-i18n="authTitle">GİRİŞ YAP / KAYDOL</h2>
-            <input type="text" id="username" data-i18n-placeholder="usernamePlaceholder" placeholder="Kullanıcı Adı">
-            <input type="password" id="password" data-i18n-placeholder="passwordPlaceholder" placeholder="Şifre">
-            <div style="display:flex; flex-direction:column; gap:10px;">
-                <div style="display:flex; justify-content:center; gap:10px;">
-                    <button onclick="handleAuth('login')" style="background:var(--neon-purple); border:none; color:white; padding:10px; cursor:pointer;" data-i18n="loginBtn">GİRİŞ</button>
-                    <button onclick="handleAuth('guest')" style="background:gray; border:none; color:white; padding:10px; cursor:pointer;" data-i18n="guestBtn">MİSAFİR</button>
-                </div>
-                <button onclick="showGuide()" style="background:transparent; border:1px solid var(--neon-blue); color:var(--neon-blue); padding:10px; cursor:pointer; width:100%;" data-i18n="guideBtn">NASIL OYNANIR?</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="guide-screen" class="overlay" style="display:none; z-index: 2000;">
-        <div class="auth-box" style="width: 600px; text-align: left; border-color: var(--neon-gold);">
-            <h2 style="color:var(--neon-gold); text-align:center;" data-i18n="guideTitle">OYUN KILAVUZU</h2>
-            <div style="font-size: 14px; line-height: 1.8; max-height: 400px; overflow-y: auto; padding: 10px; color: #ccc;">
-                <p data-i18n="guide1"><strong>🕹️ Temel Kontroller:</strong><br> WASD tuşlarını kullanarak hareket edebilir, faren ile nişan alıp sol tuşla ateş edebilirsin.</p>
-                <p data-i18n="guide2"><strong>🌊 Dalga Sistemi:</strong><br> Her yeni dalga daha zorlu düşmanlar getirir. 5, 10, 15... gibi 5'in katı olan dalgalar <strong>BOSS</strong> dalgalarıdır!</p>
-                <p data-i18n="guide3"><strong>⚡ Özel Yetenek:</strong><br> Farenin SAĞ tuşu ile 15 saniyede bir "Alan Hasarı" (Aura) yaratıp etrafındaki düşmanları erit.</p>
-                <p data-i18n="guide4"><strong>💰 Market & Gelişim:</strong><br> Düşmanları öldürerek altın biriktir. Marketten daha yüksek HP ve Armor değerine sahip karakterler satın al.</p>
-                <p data-i18n="guide5"><strong>📈 Seviye Atla:</strong><br> XP barı dolduğunda seviye atlarsın. Bu aşamada sana rastgele sunulan 5 farklı eklentiden (Hasar, Hız, Kritik vb.) birini seçerek karakterini uzmanlaştır.</p>
-            </div>
-            <button onclick="document.getElementById('guide-screen').style.display='none'" style="width:100%; padding:15px; background:var(--neon-red); border:none; color:white; cursor:pointer; margin-top:15px; font-weight:bold;" data-i18n="understoodBtn">ANLADIM, BAŞLA!</button>
-        </div>
-    </div>
 
     <div id="start-screen" class="overlay" style="display:none">
         <h1 style="color: var(--neon-red); font-size: 55px;">GameArea Fight</h1>
@@ -718,11 +639,6 @@
     function changeLanguage(lang) {
         currentLang = lang;
         localStorage.setItem('game_lang', lang);
-
-        document.querySelectorAll('.flag-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`.flag-btn[data-lang="${lang}"]`).classList.add('active');
         updateUIText();
     }
 
@@ -789,10 +705,12 @@
         if (openChapterMenu === 'true') {
             // Bayrağı temizle (sayfa yenilendiğinde tekrar açılmasın)
             sessionStorage.removeItem('openChapterMenu');
-            // Auth ve start ekranlarını gizle
-            document.getElementById('auth-screen').style.display = 'none';
             // Bölüm seçim menüsünü göster
             showChapterMenu();
+        } else {
+            // Normal başlangıç - start screen göster
+            document.getElementById('start-screen').style.display = 'flex';
+            document.getElementById('welcome-msg').innerText = `${t('welcomeBack')}, ${currentUser}!`;
         }
     });
 
