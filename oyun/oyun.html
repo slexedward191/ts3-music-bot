@@ -783,6 +783,17 @@
         changeLanguage(currentLang);
         document.getElementById('banner-container').style.display = 'flex';
         document.getElementById('logout-btn').style.display = 'block';
+
+        // Otomatik bölüm seçim menüsünü aç (kayit.html'den geldiğinde)
+        const openChapterMenu = sessionStorage.getItem('openChapterMenu');
+        if (openChapterMenu === 'true') {
+            // Bayrağı temizle (sayfa yenilendiğinde tekrar açılmasın)
+            sessionStorage.removeItem('openChapterMenu');
+            // Auth ve start ekranlarını gizle
+            document.getElementById('auth-screen').style.display = 'none';
+            // Bölüm seçim menüsünü göster
+            showChapterMenu();
+        }
     });
 
     // Sprite Drawing Functions
