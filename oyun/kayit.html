@@ -30,7 +30,7 @@
             position: relative;
         }
 
-        /* Arka Plan - Tam Genişlik Resim */
+        /* Arka Plan - Kullanıcının Eklediği Resim (Saydam Efektli) */
         .background-wrapper {
             position: fixed;
             top: 0;
@@ -38,13 +38,17 @@
             width: 100vw;
             height: 100vh;
             z-index: 0;
+            overflow: hidden;
         }
 
         .background-wrapper img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            opacity: 0.4;
+            object-position: center;
+            opacity: 0.35;
+            filter: blur(3px) contrast(1.1) brightness(0.8);
+            transform: scale(1.05);
         }
 
         .background-overlay {
@@ -407,9 +411,9 @@
     </style>
 </head>
 <body>
-    <!-- Arka Plan Resmi -->
+    <!-- Arka Plan Resmi (Kullanıcının Eklediği) -->
     <div class="background-wrapper">
-        <img src="https://agent-cdn.minimax.io/agent_web/78ywosn7kb1r/screenshot/preview.png" alt="GameArea Fight Background">
+        <img src="unnamed (4).jpg" alt="GameArea Fight Background">
         <div class="background-overlay"></div>
     </div>
 
@@ -417,7 +421,7 @@
         <!-- Başlık -->
         <div class="auth-header">
             <h1 class="game-logo">GAMEAREA FIGHT</h1>
-            <p class="auth-subtitle" data-i18n="fullEdition">KENDİNE İNANIYOR MUSUN?</p>
+            <p class="auth-subtitle" data-i18n="fullEdition">Full Edition</p>
         </div>
 
         <!-- Bayraklar -->
