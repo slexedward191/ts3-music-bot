@@ -1747,35 +1747,276 @@
     });
 
     // Sprite Drawing Functions
+    // ── In-game sprite dispatcher ──────────────────────────────────────────
+    // All sprites are drawn in top-down view, rotated to face mouse.
+    // 0,0 = character centre; +x = right (gun/facing direction)
+    let _spriteT = 0; // global animation tick, incremented each frame
     function drawPlayerSprite(ctx, x, y, size, color, angle) {
+        _spriteT++;
+        const id = (player && player.charId) ? player.charId : 'std';
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(angle);
-
-        ctx.fillStyle = '#312E81';
-        ctx.beginPath();
-        ctx.ellipse(0, 0, size * 1.2, size * 0.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#1F2937';
-        ctx.beginPath();
-        ctx.rect(size * 0.3, -size * 0.15, size * 1.5, size * 0.3);
-        ctx.fill();
-
-        ctx.fillStyle = '#374151';
-        ctx.fillRect(size * 0.6, -size * 0.08, size * 1.0, size * 0.16);
-
-        ctx.fillStyle = '#4F46E5';
-        ctx.beginPath();
-        ctx.arc(0, -size * 0.1, size * 0.7, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#1F2937';
-        ctx.beginPath();
-        ctx.ellipse(size * 0.2, -size * 0.1, size * 0.4, size * 0.15, 0, 0, Math.PI * 2);
-        ctx.fill();
-
+        if      (id === 'std') _drawSprite_Recon(ctx, size);
+        else if (id === 'mus') _drawSprite_Crusher(ctx, size);
+        else if (id === 'str') _drawSprite_Phantom(ctx, size);
+        else if (id === 'fig') _drawSprite_Titan(ctx, size);
+        else if (id === 'leg') _drawSprite_Celestial(ctx, size);
+        else                   _drawSprite_Recon(ctx, size);
         ctx.restore();
+    }
+
+    // ── RECON — cyan scout tank (matches original game feel) ──────────────
+    function _drawSprite_Recon(ctx, s) {
+        // Tank treads
+        ctx.fillStyle = '#1a1a3a';
+        ctx.beginPath(); ctx.roundRect(-s*1.1, -s*0.95, s*2.2, s*0.42, s*0.1); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(-s*1.1,  s*0.53, s*2.2, s*0.42, s*0.1); ctx.fill();
+        // Tread highlights
+        for (let i=0;i<5;i++) {
+            ctx.fillStyle = i%2===0?'#2a2a5a':'#111';
+            ctx.fillRect(-s*1.0+i*s*0.44, -s*0.93, s*0.36, s*0.38);
+            ctx.fillRect(-s*1.0+i*s*0.44,  s*0.55, s*0.36, s*0.38);
+        }
+        // Hull
+        ctx.fillStyle = '#312E81';
+        ctx.beginPath(); ctx.ellipse(0, 0, s*1.1, s*0.72, 0, 0, Math.PI*2); ctx.fill();
+        // Turret base
+        ctx.fillStyle = '#4F46E5';
+        ctx.beginPath(); ctx.arc(0, 0, s*0.72, 0, Math.PI*2); ctx.fill();
+        // Barrel
+        ctx.fillStyle = '#1F2937';
+        ctx.beginPath(); ctx.rect(s*0.3, -s*0.14, s*1.6, s*0.28); ctx.fill();
+        ctx.fillStyle = '#374151';
+        ctx.beginPath(); ctx.rect(s*0.6, -s*0.07, s*1.0, s*0.14); ctx.fill();
+        // Barrel tip
+        ctx.fillStyle = '#00f2ff';
+        ctx.beginPath(); ctx.rect(s*1.78, -s*0.1, s*0.12, s*0.2); ctx.fill();
+        // Scanner visor
+        ctx.fillStyle = 'rgba(0,242,255,0.85)';
+        ctx.beginPath(); ctx.ellipse(s*0.22, 0, s*0.42, s*0.15, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.beginPath(); ctx.ellipse(s*0.14, -s*0.05, s*0.12, s*0.06, 0, 0, Math.PI*2); ctx.fill();
+        // Exhaust vents
+        ctx.fillStyle = 'rgba(0,242,255,0.55)';
+        ctx.beginPath(); ctx.rect(-s*1.0, -s*0.28, s*0.2, s*0.18); ctx.fill();
+        ctx.beginPath(); ctx.rect(-s*1.0,  s*0.1,  s*0.2, s*0.18); ctx.fill();
+    }
+
+    // ── CRUSHER — red armored tank ──────────────────────────────────────
+    function _drawSprite_Crusher(ctx, s) {
+        const p = Math.sin(_spriteT*0.08)*0.3+0.7;
+        // Treads (wider / heavier)
+        ctx.fillStyle = '#2a0505';
+        ctx.beginPath(); ctx.roundRect(-s*1.25, -s*1.05, s*2.5, s*0.48, s*0.1); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(-s*1.25,  s*0.57, s*2.5, s*0.48, s*0.1); ctx.fill();
+        for (let i=0;i<6;i++) {
+            ctx.fillStyle = i%2===0?'#550000':'#1a0000';
+            ctx.fillRect(-s*1.15+i*s*0.44, -s*1.03, s*0.38, s*0.44);
+            ctx.fillRect(-s*1.15+i*s*0.44,  s*0.59, s*0.38, s*0.44);
+        }
+        // Spiked bumper front
+        for (let i=-1;i<=1;i++) {
+            ctx.fillStyle = '#cc0000';
+            ctx.beginPath();
+            ctx.moveTo(s*1.0+i*s*0.4, -s*0.12); ctx.lineTo(s*1.22+i*s*0.4, 0); ctx.lineTo(s*1.0+i*s*0.4, s*0.12);
+            ctx.fill();
+        }
+        // Hull (wider)
+        ctx.fillStyle = '#550a0a';
+        ctx.beginPath(); ctx.ellipse(0, 0, s*1.2, s*0.78, 0, 0, Math.PI*2); ctx.fill();
+        // Red armor plating
+        ctx.fillStyle = '#cc1111';
+        ctx.beginPath(); ctx.ellipse(0, 0, s*1.0, s*0.62, 0, 0, Math.PI*2); ctx.fill();
+        // Shoulder guards
+        ctx.fillStyle = '#990000';
+        ctx.beginPath(); ctx.arc(0, -s*0.72, s*0.3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(0,  s*0.72, s*0.3, 0, Math.PI*2); ctx.fill();
+        // Heavy cannon barrel (double)
+        ctx.fillStyle = '#3a0808';
+        ctx.beginPath(); ctx.rect(s*0.3, -s*0.28, s*1.5, s*0.22); ctx.fill();
+        ctx.beginPath(); ctx.rect(s*0.3,  s*0.06,  s*1.5, s*0.22); ctx.fill();
+        ctx.fillStyle = '#cc2222';
+        ctx.beginPath(); ctx.rect(s*1.65, -s*0.3, s*0.15, s*0.26); ctx.fill();
+        ctx.beginPath(); ctx.rect(s*1.65, s*0.04,  s*0.15, s*0.26); ctx.fill();
+        // Glowing eyes
+        ctx.fillStyle = `rgba(255,220,0,${p})`;
+        ctx.beginPath(); ctx.arc(s*0.3, -s*0.28, s*0.12, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(s*0.3,  s*0.28, s*0.12, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,80,0,0.9)';
+        ctx.beginPath(); ctx.arc(s*0.3, -s*0.28, s*0.06, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(s*0.3,  s*0.28, s*0.06, 0, Math.PI*2); ctx.fill();
+    }
+
+    // ── PHANTOM — purple stealth assassin ──────────────────────────────
+    function _drawSprite_Phantom(ctx, s) {
+        const p = Math.sin(_spriteT*0.09)*0.35+0.65;
+        // Cloak / shadow aura
+        ctx.fillStyle = `rgba(60,0,100,${p*0.4})`;
+        ctx.beginPath(); ctx.arc(0, 0, s*1.2, 0, Math.PI*2); ctx.fill();
+        // Slim dark body
+        ctx.fillStyle = '#1a0030';
+        ctx.beginPath(); ctx.ellipse(0, 0, s*0.85, s*0.58, 0, 0, Math.PI*2); ctx.fill();
+        // Purple armor
+        ctx.fillStyle = '#3a005a';
+        ctx.beginPath(); ctx.ellipse(0, 0, s*0.72, s*0.46, 0, 0, Math.PI*2); ctx.fill();
+        // Energy core (front center)
+        ctx.fillStyle = `rgba(200,50,255,${p})`;
+        ctx.beginPath(); ctx.arc(s*0.2, 0, s*0.18, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,200,255,0.95)';
+        ctx.beginPath(); ctx.arc(s*0.2, 0, s*0.09, 0, Math.PI*2); ctx.fill();
+        // Energy ring
+        ctx.strokeStyle = `rgba(200,50,255,${p*0.6})`; ctx.lineWidth = s*0.06;
+        ctx.beginPath(); ctx.arc(s*0.2, 0, s*0.28, 0, Math.PI*2); ctx.stroke();
+        // Twin blade arms (top/bottom)
+        ctx.fillStyle = `rgba(160,0,255,${p*0.9})`;
+        // Top blade
+        ctx.beginPath(); ctx.moveTo(-s*0.2,-s*0.46); ctx.lineTo(-s*0.5,-s*0.82); ctx.lineTo(s*0.1,-s*0.46); ctx.fill();
+        // Bottom blade
+        ctx.beginPath(); ctx.moveTo(-s*0.2,s*0.46); ctx.lineTo(-s*0.5,s*0.82); ctx.lineTo(s*0.1,s*0.46); ctx.fill();
+        // Blade glow
+        ctx.strokeStyle = `rgba(220,150,255,${p*0.6})`; ctx.lineWidth = s*0.04;
+        ctx.beginPath(); ctx.moveTo(-s*0.2,-s*0.46); ctx.lineTo(-s*0.5,-s*0.82); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-s*0.2, s*0.46); ctx.lineTo(-s*0.5, s*0.82); ctx.stroke();
+        // Thin barrel (dagger/gun)
+        ctx.fillStyle = '#2a0050';
+        ctx.beginPath(); ctx.rect(s*0.3, -s*0.08, s*1.35, s*0.16); ctx.fill();
+        ctx.fillStyle = `rgba(180,0,255,${p*0.9})`;
+        ctx.beginPath(); ctx.rect(s*1.5, -s*0.1, s*0.15, s*0.2); ctx.fill();
+        // Orbit particles
+        for (let i=0;i<3;i++) {
+            const a = (_spriteT*0.06) + i*Math.PI*2/3;
+            const px = Math.cos(a)*s*0.75, py = Math.sin(a)*s*0.75;
+            ctx.globalAlpha = p*0.7;
+            ctx.fillStyle = '#cc00ff';
+            ctx.beginPath(); ctx.arc(px, py, s*0.08, 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // ── TITAN — golden armored war machine ──────────────────────────────
+    function _drawSprite_Titan(ctx, s) {
+        const p = Math.sin(_spriteT*0.07)*0.25+0.75;
+        // Heavy treads
+        ctx.fillStyle = '#3a2c00';
+        ctx.beginPath(); ctx.roundRect(-s*1.3, -s*1.1, s*2.6, s*0.5, s*0.1); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(-s*1.3,  s*0.6,  s*2.6, s*0.5, s*0.1); ctx.fill();
+        for (let i=0;i<6;i++) {
+            ctx.fillStyle = i%2===0?'#6a5000':'#2a1f00';
+            ctx.fillRect(-s*1.2+i*s*0.46, -s*1.08, s*0.4, s*0.46);
+            ctx.fillRect(-s*1.2+i*s*0.46,  s*0.62, s*0.4, s*0.46);
+        }
+        // Gold tread edge
+        ctx.strokeStyle = '#c8960c'; ctx.lineWidth = s*0.06;
+        ctx.beginPath(); ctx.roundRect(-s*1.3, -s*1.1, s*2.6, s*0.5, s*0.1); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(-s*1.3,  s*0.6,  s*2.6, s*0.5, s*0.1); ctx.stroke();
+        // Side shield plates
+        ctx.fillStyle = '#c8960c';
+        ctx.beginPath(); ctx.roundRect(-s*1.35, -s*0.72, s*0.32, s*1.44, s*0.06); ctx.fill();
+        ctx.fillStyle = `rgba(255,220,0,${p*0.35})`;
+        ctx.beginPath(); ctx.roundRect(-s*1.35, -s*0.72, s*0.32, s*1.44, s*0.06); ctx.fill();
+        // Hull
+        ctx.fillStyle = '#3a2c00';
+        ctx.beginPath(); ctx.ellipse(0, 0, s*1.15, s*0.72, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#c8960c';
+        ctx.beginPath(); ctx.ellipse(0, 0, s*0.95, s*0.58, 0, 0, Math.PI*2); ctx.fill();
+        // Sun emblem (spinning)
+        ctx.save(); ctx.rotate(_spriteT*0.02);
+        ctx.fillStyle = `rgba(255,220,0,${p})`;
+        ctx.beginPath(); ctx.arc(0, 0, s*0.22, 0, Math.PI*2); ctx.fill();
+        for (let i=0;i<8;i++) {
+            const a=i*Math.PI/4;
+            ctx.strokeStyle=`rgba(255,220,0,${p*0.7})`; ctx.lineWidth=s*0.05;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a)*s*0.26, Math.sin(a)*s*0.26);
+            ctx.lineTo(Math.cos(a)*s*0.38, Math.sin(a)*s*0.38);
+            ctx.stroke();
+        }
+        ctx.restore();
+        // Cannon (thick)
+        ctx.fillStyle = '#7a5c00';
+        ctx.beginPath(); ctx.rect(s*0.3, -s*0.22, s*1.4, s*0.44); ctx.fill();
+        ctx.fillStyle = '#c8960c';
+        ctx.beginPath(); ctx.rect(s*0.3, -s*0.16, s*1.4, s*0.32); ctx.fill();
+        // Cannon tip
+        ctx.fillStyle = `rgba(255,220,0,${p})`;
+        ctx.beginPath(); ctx.rect(s*1.55, -s*0.2, s*0.15, s*0.4); ctx.fill();
+        // Visor slit
+        ctx.fillStyle = `rgba(255,230,0,${p*0.95})`;
+        ctx.beginPath(); ctx.roundRect(s*0.0, -s*0.32, s*0.5, s*0.14, s*0.04); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(s*0.0,  s*0.18, s*0.5, s*0.14, s*0.04); ctx.fill();
+    }
+
+    // ── CELESTIAL — divine energy being ─────────────────────────────────
+    function _drawSprite_Celestial(ctx, s) {
+        const p = Math.sin(_spriteT*0.06)*0.2+0.8;
+        // Divine aura
+        const ag = ctx.createRadialGradient(0,0,0,0,0,s*1.8);
+        ag.addColorStop(0,`rgba(255,255,200,${p*0.2})`);
+        ag.addColorStop(0.6,`rgba(180,120,255,${p*0.1})`);
+        ag.addColorStop(1,'transparent');
+        ctx.fillStyle=ag; ctx.beginPath(); ctx.arc(0,0,s*1.8,0,Math.PI*2); ctx.fill();
+        // Wings (top/bottom, flapping)
+        const wf = Math.sin(_spriteT*0.08)*0.15;
+        for (let sd=-1;sd<=1;sd+=2) {
+            ctx.save(); ctx.scale(1, sd);
+            ctx.fillStyle=`rgba(255,255,220,${p*0.85})`;
+            ctx.beginPath();
+            ctx.moveTo(-s*0.2, s*0.36);
+            ctx.quadraticCurveTo(-s*0.6+wf*s*0.5, s*1.1, -s*1.3, s*(0.88+wf*0.3));
+            ctx.quadraticCurveTo(-s*0.9, s*0.5, -s*0.1, s*0.42);
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle=`rgba(255,240,150,${p*0.6})`; ctx.lineWidth=s*0.06;
+            ctx.beginPath();
+            ctx.moveTo(-s*0.2, s*0.36);
+            ctx.quadraticCurveTo(-s*0.6+wf*s*0.5, s*1.1, -s*1.3, s*(0.88+wf*0.3));
+            ctx.stroke();
+            // Feather lines
+            ctx.strokeStyle=`rgba(200,180,255,${p*0.4})`; ctx.lineWidth=s*0.03;
+            for(let f=0;f<3;f++) {
+                const fx=-s*(0.35+f*0.35), fy=s*(0.5+f*0.12);
+                ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(fx-s*0.35,fy+s*0.4); ctx.stroke();
+            }
+            ctx.restore();
+        }
+        // Body — translucent divine form
+        ctx.fillStyle='rgba(255,255,245,0.92)';
+        ctx.beginPath(); ctx.ellipse(0, 0, s*0.82, s*0.55, 0, 0, Math.PI*2); ctx.fill();
+        // Gold armor accents
+        ctx.strokeStyle=`rgba(255,220,0,${p*0.85})`; ctx.lineWidth=s*0.08;
+        ctx.beginPath(); ctx.ellipse(0, 0, s*0.65, s*0.42, 0, 0, Math.PI*2); ctx.stroke();
+        // Central gem
+        ctx.fillStyle=`rgba(255,200,255,${p})`;
+        ctx.beginPath(); ctx.arc(s*0.1, 0, s*0.18, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,0.98)';
+        ctx.beginPath(); ctx.arc(s*0.1, 0, s*0.09, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle=`rgba(255,180,255,${p*0.6})`; ctx.lineWidth=s*0.06;
+        ctx.beginPath(); ctx.arc(s*0.1, 0, s*0.26, 0, Math.PI*2); ctx.stroke();
+        // Divine beam / barrel
+        ctx.fillStyle=`rgba(255,240,200,${p*0.9})`;
+        ctx.beginPath(); ctx.rect(s*0.42, -s*0.1, s*1.4, s*0.2); ctx.fill();
+        ctx.fillStyle=`rgba(255,200,100,${p})`;
+        ctx.beginPath(); ctx.rect(s*1.65, -s*0.13, s*0.16, s*0.26); ctx.fill();
+        // Halo ring above
+        ctx.strokeStyle=`rgba(255,220,50,${p*0.9})`; ctx.lineWidth=s*0.1;
+        ctx.beginPath(); ctx.arc(0, 0, s*1.1, -Math.PI*0.2, -Math.PI*0.8, true); ctx.stroke();
+        ctx.strokeStyle=`rgba(255,255,200,${p*0.3})`; ctx.lineWidth=s*0.2;
+        ctx.stroke();
+        // Sparkles
+        for (let i=0;i<5;i++) {
+            const a = _spriteT*0.05+i*Math.PI*2/5;
+            const r = s*(0.9+Math.sin(_spriteT*0.08+i)*0.2);
+            const sx=Math.cos(a)*r, sy=Math.sin(a)*r;
+            ctx.globalAlpha=Math.sin(_spriteT*0.1+i)*0.35+0.4;
+            ctx.fillStyle='rgba(255,255,150,0.95)';
+            const ss=s*0.07;
+            ctx.beginPath();
+            ctx.moveTo(sx,sy-ss); ctx.lineTo(sx+ss*0.3,sy-ss*0.3); ctx.lineTo(sx+ss,sy);
+            ctx.lineTo(sx+ss*0.3,sy+ss*0.3); ctx.lineTo(sx,sy+ss); ctx.lineTo(sx-ss*0.3,sy+ss*0.3);
+            ctx.lineTo(sx-ss,sy); ctx.lineTo(sx-ss*0.3,sy-ss*0.3);
+            ctx.closePath(); ctx.fill();
+            ctx.globalAlpha=1;
+        }
     }
 
     function drawEnemySprite(ctx, x, y, size, color) {
@@ -2708,7 +2949,7 @@
         player = {
             x: 625, y: 400, hp: charData.hp, maxHp: charData.hp, armor: charData.armor,
             speed: 3.5, dmg: 30, shootSpeed: 300, crit: 0, bounce: 0, upgrades: [], color: charData.color,
-            angle: 0
+            angle: 0, charId: charData.id
         };
         enemies = []; bullets = []; particles = [];
         document.getElementById('start-screen').style.display = 'none';
