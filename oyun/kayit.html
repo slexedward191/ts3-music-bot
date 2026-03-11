@@ -393,6 +393,32 @@
             display: block;
         }
 
+        /* Ses Kontrol Butonu */
+        #music-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1.5px solid rgba(0, 242, 255, 0.4);
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.25s;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 12px rgba(0, 242, 255, 0.2);
+        }
+        #music-toggle:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 22px rgba(0, 242, 255, 0.55);
+            transform: scale(1.1);
+        }
+
         @media (max-width: 500px) {
             .auth-container {
                 padding: 25px;
@@ -411,6 +437,13 @@
     </style>
 </head>
 <body>
+
+    <!-- Arka Plan Müziği -->
+    <audio id="bg-music" src="kayit.mp3" loop preload="auto"></audio>
+
+    <!-- Ses Kontrol Butonu -->
+    <button id="music-toggle" onclick="toggleMusic()" title="Müziği Aç/Kapat">🔊</button>
+
     <!-- Arka Plan Resmi (Kullanıcının Eklediği) -->
     <div class="background-wrapper">
         <img src="unnamed (4).jpg" alt="GameArea Fight Background">
@@ -499,6 +532,31 @@
     </div>
 
     <script>
+        // ── MÜZİK SİSTEMİ ────────────────────────────────────────────────────
+        const bgMusic = document.getElementById('bg-music');
+        bgMusic.volume = 0.5;
+        let musicMuted = false;
+
+        // Tarayıcı autoplay politikası: ilk kullanıcı etkileşiminde başlat
+        function _tryPlay() {
+            bgMusic.play().catch(() => {});
+            document.removeEventListener('click', _tryPlay);
+            document.removeEventListener('keydown', _tryPlay);
+        }
+        bgMusic.play().catch(() => {
+            document.addEventListener('click', _tryPlay, { once: true });
+            document.addEventListener('keydown', _tryPlay, { once: true });
+        });
+
+        function toggleMusic() {
+            const btn = document.getElementById('music-toggle');
+            musicMuted = !musicMuted;
+            bgMusic.muted = musicMuted;
+            btn.textContent = musicMuted ? '🔇' : '🔊';
+            if (!musicMuted && bgMusic.paused) bgMusic.play().catch(() => {});
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         // Dil Sistemleri
         const translations = {
             tr: {
